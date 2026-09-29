@@ -1,0 +1,70 @@
+# Reactive :: Spring Security
+SOURCE: https://docs.spring.io/spring-security/reference/migration/reactive.html
+
+# Reactive
+If you have already performed the initial migration steps for your Reactive application, you’re now ready to perform steps specific to Reactive applications.
+
+## Validate typ Header with JwtTypeValidator
+If when following the 6.5 preparatory steps you set validateTypes to false, you can now remove it. You can also remove explicitly adding JwtTypeValidator to the list of defaults.
+For example, change this:
+Java
+Kotlin
+
+CODE EXAMPLE
+LANGUAGE: java
+```
+@Bean
+JwtDecoder jwtDecoder() {
+	NimbusReactiveJwtDecoder jwtDecoder = NimbusReactiveJwtDecoder.withIssuerLocation(location)
+        .validateTypes(false) (1)
+        // ... your remaining configuration
+        .build();
+	jwtDecoder.setJwtValidator(JwtValidators.createDefaultWithValidators(
+		new JwtIssuerValidator(location), JwtTypeValidator.jwt())); (2)
+	return jwtDecoder;
+}
+```
+
+CODE EXAMPLE
+LANGUAGE: kotlin
+```
+@Bean
+fun jwtDecoder(): JwtDecoder {
+    val jwtDecoder = NimbusReactiveJwtDecoder.withIssuerLocation(location)
+        .validateTypes(false) (1)
+        // ... your remaining configuration
+        .build()
+    jwtDecoder.setJwtValidator(JwtValidators.createDefaultWithValidators(
+        JwtIssuerValidator(location), JwtTypeValidator.jwt())) (2)
+    return jwtDecoder
+}
+```
+to this:
+Java
+Kotlin
+
+CODE EXAMPLE
+LANGUAGE: java
+```
+@Bean
+NimbusReactiveJwtDecoder jwtDecoder() {
+	NimbusJwtDecoder jwtDecoder = NimbusReactiveJwtDecoder.withIssuerLocation(location)
+        // ... your remaining configuration (1)
+        .build();
+	jwtDecoder.setJwtValidator(JwtValidators.createDefaultWithIssuer(location)); (2)
+	return jwtDecoder;
+}
+```
+
+CODE EXAMPLE
+LANGUAGE: kotlin
+```
+@Bean
+fun jwtDecoder(): NimbusReactiveJwtDecoder {
+    val jwtDecoder = NimbusReactiveJwtDecoder.withIssuerLocation(location)
+        // ... your remaining configuration
+        .build()
+    jwtDecoder.setJwtValidator(JwtValidators.createDefaultWithIssuer(location)) (2)
+    return jwtDecoder
+}
+```

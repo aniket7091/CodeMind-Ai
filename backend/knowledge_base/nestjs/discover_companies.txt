@@ -1,0 +1,9 @@
+# Discover - Who is using Nest? | NestJS - A progressive Node.js framework
+SOURCE: https://docs.nestjs.com/discover/companies
+
+### Who is using Nest?
+Nest helps companies of all sizes build their products at scale. If you use Nest and would like to be listed here, comment on the "Who is using Nest in production?" GitHub issue. We'd be glad to add your logo.
+
+#### Companies#
+To our knowledge, all of the following companies have built projects on top of Nest:
+and a lot more but we don't have enough time to update above list. Feel free to create a pull request though!

@@ -1,0 +1,9 @@
+# Assets & media
+SOURCE: https://docs.flutter.dev/ui/assets
+Flutter 3.47 is here! Read the blog post.
+
+# Assets & media
+Content covering incorporating assets and media in Flutter apps.
+How to set up automatic transformation of images (and other assets) in your Flutter app.
+How to use images (and other assets) in your Flutter app.
+Unless stated otherwise, the documentation on this site reflects Flutter 3.47. Page last updated on 2026-05-05. View source or report an issue.

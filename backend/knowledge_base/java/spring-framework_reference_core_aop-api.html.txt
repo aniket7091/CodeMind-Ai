@@ -1,0 +1,17 @@
+# Spring AOP APIs :: Spring Framework
+SOURCE: https://docs.spring.io/spring-framework/reference/core/aop-api.html
+
+# Spring AOP APIs
+The previous chapter described the Spring’s support for AOP with @AspectJ and schema-based aspect definitions. In this chapter, we discuss the lower-level Spring AOP APIs. For common applications, we recommend the use of Spring AOP with AspectJ pointcuts as described in the previous chapter.
+
+## Section Summary
+- Pointcut API in Spring
+- Advice API in Spring
+- The Advisor API in Spring
+- Using the ProxyFactoryBean to Create AOP Proxies
+- Concise Proxy Definitions
+- Creating AOP Proxies Programmatically with the ProxyFactory
+- Manipulating Advised Objects
+- Using the "auto-proxy" facility
+- Using TargetSource Implementations
+- Defining New Advice Types

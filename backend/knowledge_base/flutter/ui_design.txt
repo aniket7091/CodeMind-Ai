@@ -1,0 +1,11 @@
+# Design & theming
+SOURCE: https://docs.flutter.dev/ui/design
+Flutter 3.47 is here! Read the blog post.
+
+# Design & theming
+Content covering designing Flutter apps.
+Content covering how to add and customize text in Flutter appw.
+Content covering how to create custom graphics and use your own shaders in Flutter apps.
+Learn about Material Design for Flutter.
+Learn about Cupertino design for Flutter.
+Unless stated otherwise, the documentation on this site reflects Flutter 3.47. Page last updated on 2026-05-05. View source or report an issue.

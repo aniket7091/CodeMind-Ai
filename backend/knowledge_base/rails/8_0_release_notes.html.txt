@@ -1,0 +1,189 @@
+# Ruby on Rails 8.0 Release Notes — Ruby on Rails Guides
+SOURCE: https://guides.rubyonrails.org/8_0_release_notes.html
+
+# Ruby on Rails 8.0 Release Notes
+Highlights in Rails 8.0:
+- Kamal 2.
+- Thruster.
+- Solid Cable.
+- Solid Cache.
+- Propshaft is used by default.
+- Authentication system generator.
+These release notes cover only the major changes. To learn about various bug fixes and changes, please refer to the changelogs or check out the list of commits in the main Rails repository on GitHub.
+
+## 1. Upgrading to Rails 8.0
+If you're upgrading an existing application, it's a great idea to have good test coverage before going in. You should also first upgrade to Rails 7.2 in case you haven't and make sure your application still runs as expected before attempting an update to Rails 8.0. A list of things to watch out for when upgrading is available in the Upgrading Ruby on Rails guide.
+
+## 2. Major Features
+
+### 2.1. Kamal 2
+Rails now comes preconfigured with Kamal 2 for deploying your application. Kamal takes a fresh Linux box and turns it into an application or accessory server with just a single “kamal setup” command.
+Kamal 2 also includes a proxy called Kamal Proxy to replace the generic Traefik option it used at launch.
+
+### 2.2. Thruster
+The Dockerfile has been upgraded to include a new proxy called Thruster, which sits in front of the Puma web server to provide X-Sendfile acceleration, asset caching, and asset compression.
+
+### 2.3. Solid Cable
+Solid Cable replaces Redis to act as the pubsub server to relay WebSocket messages from the application to clients connected to different processes. Solid Cable retains the messages sent in the database for a day by default.
+
+### 2.4. Solid Cache
+Solid Cache replaces either Redis or Memcached for storing HTML fragment caches in particular.
+
+### 2.5. Solid Queue
+Solid Queue replaces the need for Redis, also a separate job-running framework, like Resque, Delayed Job, or Sidekiq.
+For high-performance installations, it’s built on the new FOR UPDATE SKIP LOCKED mechanism first introduced in PostgreSQL 9.5, but now also available in MySQL 8.0 and beyond. It also works with SQLite.
+
+### 2.6. Propshaft
+Propshaft is now the default asset pipeline, replacing the old Sprockets system.
+
+### 2.7. Authentication
+Authentication system generator, creates a starting point for a session-based, password-resettable, metadata-tracking authentication system.
+
+## 3. Railties
+Please refer to the Changelog for detailed changes.
+
+### 3.1. Removals
+Remove deprecated config.read_encrypted_secrets.
+Remove deprecated file rails/console/app.
+Remove deprecated file rails/console/helpers.
+Remove deprecated support to extend Rails console through Rails::ConsoleMethods.
+
+### 3.2. Deprecations
+Deprecate requiring "rails/console/methods".
+Deprecate modifying STATS_DIRECTORIES in favor of Rails::CodeStatistics.register_directory.
+Deprecate bin/rake stats in favor of bin/rails stats.
+
+### 3.3. Notable changes
+- Set Regexp.timeout to 1s by default to improve security over Regexp Denial-of-Service attacks.
+
+## 4. Action Cable
+Please refer to the Changelog for detailed changes.
+
+### 4.1. Removals
+
+### 4.2. Deprecations
+
+### 4.3. Notable changes
+
+## 5. Action Pack
+Please refer to the Changelog for detailed changes.
+
+### 5.1. Removals
+- Remove Rails.application.config.action_controller.allow_deprecated_parameters_hash_equality.
+
+### 5.2. Deprecations
+- Deprecate drawing routes with multiple paths to make routing faster.
+
+### 5.3. Notable changes
+- Introduce safer, more explicit params handling method with params#expect such that params.expect(table: [ :attr ]) replaces params.require(:table).permit(:attr).
+
+## 6. Action View
+Please refer to the Changelog for detailed changes.
+
+### 6.1. Removals
+Remove deprecated support to passing nil to the model: argument of form_with.
+Remove deprecated support to passing a content to void tag elements on the tag builder.
+
+### 6.2. Deprecations
+
+### 6.3. Notable changes
+
+## 7. Action Mailer
+Please refer to the Changelog for detailed changes.
+
+### 7.1. Removals
+
+### 7.2. Deprecations
+
+### 7.3. Notable changes
+
+## 8. Active Record
+Please refer to the Changelog for detailed changes.
+
+### 8.1. Removals
+Remove deprecated config.active_record.commit_transaction_on_non_local_return.
+Remove deprecated config.active_record.allow_deprecated_singular_associations_name.
+Remove deprecated support to finding database adapters that aren't registered to Active Record.
+Remove deprecated support for defining enum with keyword arguments.
+Remove deprecated config.active_record.warn_on_records_fetched_greater_than.
+Remove deprecated config.active_record.sqlite3_deprecated_warning.
+Remove deprecated ActiveRecord::ConnectionAdapters::ConnectionPool#connection.
+Remove deprecated support to passing a database name to cache_dump_filename.
+Remove deprecated support to setting ENV["SCHEMA_CACHE"].
+
+### 8.2. Deprecations
+- Deprecate the retries option for the SQLite3Adapter in favor of timeout.
+
+### 8.3. Notable changes
+- Running db:migrate on a fresh database now loads the schema before running migrations. Subsequent calls will run pending migrations. (If you need the previous behavior of running migrations from scratch instead of loading the schema file, this can be done by running db:migrate:reset which will drop and recreate the database before running migrations)
+
+## 9. Active Storage
+Please refer to the Changelog for detailed changes.
+
+### 9.1. Removals
+
+### 9.2. Deprecations
+- Deprecate the Azure backend for Active Storage.
+
+### 9.3. Notable changes
+
+## 10. Active Model
+Please refer to the Changelog for detailed changes.
+
+### 10.1. Removals
+
+### 10.2. Deprecations
+
+### 10.3. Notable changes
+
+## 11. Active Support
+Please refer to the Changelog for detailed changes.
+
+### 11.1. Removals
+Remove deprecated ActiveSupport::ProxyObject.
+Remove deprecated support to setting attr_internal_naming_format with a @ prefix.
+Remove deprecated support to passing an array of strings to ActiveSupport::Deprecation#warn.
+
+### 11.2. Deprecations
+Deprecate Benchmark.ms.
+Deprecate addition and since between two Time and ActiveSupport::TimeWithZone.
+
+### 11.3. Notable changes
+
+## 12. Active Job
+Please refer to the Changelog for detailed changes.
+
+### 12.1. Removals
+- Remove deprecated config.active_job.use_big_decimal_serializer.
+
+### 12.2. Deprecations
+Deprecate enqueue_after_transaction_commit.
+Deprecate internal SuckerPunch adapter in favor of the adapter included with the sucker_punch gem.
+
+### 12.3. Notable changes
+
+## 13. Action Text
+Please refer to the Changelog for detailed changes.
+
+### 13.1. Removals
+
+### 13.2. Deprecations
+
+### 13.3. Notable changes
+
+## 14. Action Mailbox
+Please refer to the Changelog for detailed changes.
+
+### 14.1. Removals
+
+### 14.2. Deprecations
+
+### 14.3. Notable changes
+
+## 15. Ruby on Rails Guides
+Please refer to the Changelog for detailed changes.
+
+### 15.1. Notable changes
+
+## 16. Credits
+See the full list of contributors to Rails for the many people who spent many hours making Rails, the stable and robust framework it is. Kudos to all of them.

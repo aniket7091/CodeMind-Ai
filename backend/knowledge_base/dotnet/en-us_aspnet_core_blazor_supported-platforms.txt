@@ -1,0 +1,36 @@
+# ASP.NET Core Blazor supported platforms | Microsoft Learn
+SOURCE: https://learn.microsoft.com/en-us/aspnet/core/blazor/supported-platforms
+Note
+Access to this page requires authorization. You can try signing in or changing directories.
+Access to this page requires authorization. You can try changing directories.
+
+# ASP.NET Core Blazor supported platforms
+Note
+This isn't the latest version of this article. For the current release, see the .NET 10 version of this article.
+Warning
+This version of ASP.NET Core is no longer supported. For more information, see the .NET and .NET Core Support Policy. For the current release, see the .NET 10 version of this article.
+Blazor is supported in the browsers shown in the following table on both mobile and desktop platforms.
+†Current refers to the latest version of the browser.
+
+## Blazor WebAssembly
+†Current refers to the latest version of the browser.
+
+## Blazor Server
+†Current refers to the latest version of the browser.
+For Blazor Hybrid apps, we test on and support the latest platform Web View control versions:
+- Microsoft Edge WebView2 on Windows
+- Chrome on Android
+- Safari on iOS and macOS
+
+## Additional resources
+- ASP.NET Core Blazor hosting models
+- ASP.NET Core SignalR supported platforms
+ASP.NET Core
+
+## Feedback
+Was this page helpful?
+Need help with this topic?
+Want to try using Ask Learn to clarify or guide you through this topic?
+
+## Additional resources
+- Last updated on 2025-11-12

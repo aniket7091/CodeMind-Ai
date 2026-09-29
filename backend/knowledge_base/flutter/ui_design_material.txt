@@ -1,0 +1,17 @@
+# Material Design for Flutter
+SOURCE: https://docs.flutter.dev/ui/design/material
+Flutter 3.47 is here! Read the blog post.
+
+# Material Design for Flutter
+Learn about Material Design for Flutter.
+Material Design is an open-source design system built and supported by Google designers and developers.
+The latest version, Material 3, enables personal, adaptive, and expressive experiences—from dynamic color and enhanced accessibility, to foundations for large screen layouts, and design tokens.
+For most Flutter widgets, upgrading to Material 3 is seamless. But some widgets couldn't be updated—entirely new implementations were needed, such as NavigationBar. You must make these changes to your code manually. Until your app is entirely updated, the UI might look or act a bit strange. You can find the entirely new Material components by visiting the Affected widgets page.
+Explore the updated components, typography, color system, and elevation support with the Material 3 demo.
+
+## More information
+To learn more about Material Design and Flutter, check out:
+- Material.io developer documentation
+- Migrating a Flutter app to Material 3 blog post by Taha Tesser
+- Umbrella issue on GitHub
+Unless stated otherwise, the documentation on this site reflects Flutter 3.47. Page last updated on 2026-07-31. View source or report an issue.

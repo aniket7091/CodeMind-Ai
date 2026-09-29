@@ -1,0 +1,10 @@
+# Servlet Migrations :: Spring Security
+SOURCE: https://docs.spring.io/spring-security/reference/migration/servlet/
+
+# Servlet Migrations
+If you have already performed the initial migration steps for your Servlet application, you’re now ready to perform steps specific to Servlet applications.
+
+## Section Summary
+- Authorization
+- OAuth 2.0
+- SAML 2.0

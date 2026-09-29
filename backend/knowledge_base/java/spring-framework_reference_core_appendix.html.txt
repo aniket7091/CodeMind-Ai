@@ -1,0 +1,9 @@
+# Appendix :: Spring Framework
+SOURCE: https://docs.spring.io/spring-framework/reference/core/appendix.html
+
+# Appendix
+
+## Section Summary
+- XML Schemas
+- XML Schema Authoring
+- Application Startup Steps

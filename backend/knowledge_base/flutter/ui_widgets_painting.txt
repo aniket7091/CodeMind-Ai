@@ -1,0 +1,19 @@
+# Painting and effect widgets
+SOURCE: https://docs.flutter.dev/ui/widgets/painting
+Flutter 3.47 is here! Read the blog post.
+
+# Painting and effect widgets
+A catalog of Flutter's painting and effect widgets. These widgets apply visual effects to the children without changing their layout, size, or position.
+These widgets apply visual effects to the children without changing their layout, size, or position.
+A widget that applies a filter to the existing painted content and then paints a child. This effect is relatively expensive, especially if the filter...
+A widget that clips its child using an oval.
+A widget that clips its child using a path.
+A widget that clips its child using a rectangle.
+A widget that provides a canvas on which to draw during the paint phase.
+A widget that paints a Decoration either before or after its child paints.
+A widget that applies a translation expressed as a fraction of the box's size before painting its child.
+A widget that makes its child partially transparent.
+A widget that rotates its child by a integral number of quarter turns.
+A widget that applies a transformation before painting its child.
+Find more widgets in the widget catalog.
+Unless stated otherwise, the documentation on this site reflects Flutter 3.47. Page last updated on 2026-05-31. Report an issue.

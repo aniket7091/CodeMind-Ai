@@ -1,0 +1,128 @@
+# ASP.NET documentation | Microsoft Learn
+SOURCE: https://learn.microsoft.com/en-us/aspnet/core/
+
+# ASP.NET documentation
+Learn to use ASP.NET Core to create web apps and services that are fast, secure, cross-platform, and cloud-based. Browse tutorials, sample code, fundamentals, API reference and more.
+Get started
+Overview
+Download
+Get started
+Get started
+
+## Develop ASP.NET Core apps
+Choose interactive web apps, web API, MVC-patterned apps, real-time apps, and more
+
+### HTTP API apps
+Develop HTTP services with ASP.NET Core
+
+### Interactive client-side Blazor apps
+Develop with reusable UI components that can take advantage of WebAssembly for near-native performance
+
+### Page-focused web UI with Razor Pages
+Develop page-focused web apps with a clean separation of concerns
+
+### Page-focused web UI with MVC
+Develop web apps using the Model-View-Controller design pattern
+
+### Data-driven web apps
+Create data-driven web apps in ASP.NET Core
+
+### Real-time web apps with SignalR
+Add real-time functionality to your web app, enable server-side code to push content instantly
+
+### Remote Procedure Call (RPC) apps - gRPC services
+Develop contract-first, high-performance services with gRPC in ASP.NET Core
+
+### Previous ASP.NET framework versions
+Explore overviews, tutorials, fundamental concepts, architecture and API reference for previous ASP.NET framework versions
+
+### ASP.NET Core video tutorials
+
+## Concepts and features
+
+### API reference for ASP.NET Core
+- .NET API browser
+
+### Servers
+- Overview
+- Kestrel
+- IIS
+- HTTP.sys
+
+### Host and deploy
+- Overview
+- Deploy to Azure App Service
+- DevOps for ASP.NET Core Developers
+- Linux with Apache
+- Linux with Nginx
+- Kestrel
+- IIS
+- HTTP.sys
+- Docker
+
+### Security and identity
+- Overview
+- Choose an identity solution
+- Authentication
+- Authorization
+- Course: Secure an ASP.NET Core web app with the Identity framework
+- Data protection
+- Secrets management
+- Enforce HTTPS
+- Host Docker with HTTPS
+
+### Globalization and localization
+- Overview
+- Portable object localization
+- Localization extensibility
+- Troubleshoot
+
+### Test, debug and troubleshoot
+- Razor Pages unit tests
+- Remote debugging
+- Snapshot debugging
+- Integration tests
+- Load and stress testing
+- Troubleshoot and debug
+- Logging
+- Load test Azure web apps by using Azure DevOps
+
+### Azure and ASP.NET Core
+- Deploy an ASP.NET Core web app
+- ASP.NET Core and Docker
+- Host a web application with Azure App Service
+- App Service and Azure SQL Database
+- Managed identity with ASP.NET Core and Azure SQL Database
+- Web API with CORS in Azure App Service
+- Capture Web Application Logs with App Service Diagnostics Logging
+
+### Performance
+- Overview
+- Memory and garbage collection
+- Response caching
+- Response compression
+- Diagnostic tools
+- Load and stress testing
+
+### Advanced features
+- Model binding
+- Model validation
+- Write middleware
+- Request and response operations
+- URL rewriting
+
+### Migration
+- ASP.NET Core 8.0 to 9.0
+- ASP.NET Core 7.0 to 8.0
+- ASP.NET Core 6.0 to 7.0
+- ASP.NET Core 5.0 to 6.0
+- ASP.NET Core 5.0 code samples to 6.0 minimal hosting model
+- Earlier versions
+
+### Architecture
+- Choose between traditional web apps and Single Page Apps (SPAs)
+- Architectural principles
+- Common web application architectures
+- Common client-side web technologies
+- Development process for Azure
+Contribute to ASP.NET Core docs. Read our contributor guide.

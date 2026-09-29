@@ -1,0 +1,8 @@
+# Tutorials - The Go Programming Language
+SOURCE: https://go.dev/doc/tutorial/
+- Documentation
+- Tutorials
+
+# Tutorials
+If you're new to a part of Go, take a look at the tutorials linked below.
+If you haven't installed Go yet, see Download and install.

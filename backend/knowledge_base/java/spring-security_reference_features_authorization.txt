@@ -1,0 +1,11 @@
+# Authorization :: Spring Security
+SOURCE: https://docs.spring.io/spring-security/reference/features/authorization/
+
+# Authorization
+Spring Security provides comprehensive support for authorization. Authorization is determining who is allowed to access a particular resource. Spring Security provides defense in depth by allowing for request based authorization and method based authorization.
+
+## Request Based Authorization
+Spring Security provides authorization based upon the request for both Servlet and WebFlux environments.
+
+## Method Based Authorization
+Spring Security provides authorization based on the method invocation for both Servlet and WebFlux environments.

@@ -1,0 +1,28 @@
+# Global prefix - FAQ | NestJS - A progressive Node.js framework
+SOURCE: https://docs.nestjs.com/faq/global-prefix
+
+### Global prefix
+To set a prefix for every route registered in an HTTP application, call the setGlobalPrefix() method on the INestApplication instance.
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+const app = await NestFactory.create(AppModule);
+app.setGlobalPrefix('v1');
+```
+To exclude routes from the global prefix, use the exclude option:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+app.setGlobalPrefix('v1', {
+  exclude: [{ path: 'health', method: RequestMethod.GET }],
+});
+```
+Alternatively, you can specify a route as a string, which excludes it for every request method:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+app.setGlobalPrefix('v1', { exclude: ['cats'] });
+```

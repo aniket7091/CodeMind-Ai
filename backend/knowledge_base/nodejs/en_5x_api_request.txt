@@ -1,0 +1,519 @@
+# Request Object · Express.js 5.x
+SOURCE: https://expressjs.com/en/5x/api/request/
+
+# Request Object
+The req object represents the HTTP request and has properties for the request query string, parameters, body, HTTP headers, and so on. In this documentation and by convention, the object is always referred to as req (and the HTTP response is res) but its actual name is determined by the parameters to the callback function in which you’re working.
+For example:
+
+CODE EXAMPLE
+```
+app.get('/user/:id', (req, res) => {  res.send(`user ${req.params.id}`);});
+```
+
+CODE EXAMPLE
+```
+import { type Request, type Response } from 'express';
+app.get('/user/:id', (req: Request, res: Response) => {  res.send(`user ${req.params.id}`);});
+```
+But you could just as well have:
+
+CODE EXAMPLE
+```
+app.get('/user/:id', (request, response) => {  response.send(`user ${request.params.id}`);});
+```
+
+CODE EXAMPLE
+```
+import { type Request, type Response } from 'express';
+app.get('/user/:id', (request: Request, response: Response) => {  response.send(`user ${request.params.id}`);});
+```
+The req object is an enhanced version of Node’s own request object and supports all built-in fields and methods.
+
+## Properties
+The req object contains a number of properties that provide information about the HTTP request, such as headers, query parameters, and more.
+
+### req.app
+Type:Application
+This property holds a reference to the instance of the Express application that is using the middleware.
+If you follow the pattern in which you create a module that just exports a middleware function and require() it in your main file, then the middleware can access the Express instance via req.app
+For example:
+
+CODE EXAMPLE
+```
+app.get('/viewdirectory', require('./mymiddleware.cjs'));
+```
+
+CODE EXAMPLE
+```
+import mymiddleware from './mymiddleware.mjs';
+app.get('/viewdirectory', mymiddleware);
+```
+And the middleware module itself:
+
+CODE EXAMPLE
+```
+module.exports = (req, res) => {  res.send(`The views directory is ${req.app.get('views')}`);};
+```
+
+CODE EXAMPLE
+```
+export default (req, res) => {  res.send(`The views directory is ${req.app.get('views')}`);};
+```
+
+CODE EXAMPLE
+```
+import { type Request, type Response } from 'express';
+export default (req: Request, res: Response) => {  res.send(`The views directory is ${req.app.get('views')}`);};
+```
+
+### req.baseUrl
+Type:String
+The URL path on which a router instance was mounted.
+The req.baseUrl property is similar to the mountpath property of the app object, except app.mountpath returns the matched path pattern(s).
+For example:
+
+CODE EXAMPLE
+```
+const greet = express.Router();
+greet.get('/jp', (req, res) => {  console.log(req.baseUrl); // /greet  res.send('Konnichiwa!');});
+app.use('/greet', greet); // load the router on '/greet'
+```
+
+CODE EXAMPLE
+```
+import express, { type Request, type Response } from 'express';
+const greet = express.Router();
+greet.get('/jp', (req: Request, res: Response) => {  console.log(req.baseUrl); // /greet  res.send('Konnichiwa!');});
+app.use('/greet', greet); // load the router on '/greet'
+```
+Even if you use a path pattern or a set of path patterns to load the router, the baseUrl property returns the matched string, not the pattern(s). In the following example, the greet router is loaded on two path patterns.
+
+CODE EXAMPLE
+```
+app.use(['/gre:"param"t', '/hel{l}o'], greet); // load the router on '/gre:"param"t' and '/hel{l}o'
+```
+When a request is made to /greet/jp, req.baseUrl is “/greet”. When a request is made to /hello/jp, req.baseUrl is “/hello”.
+
+### req.body
+Type:Object
+Contains key-value pairs of data submitted in the request body. By default, it is undefined, and is populated when you use body-parsing middleware such as express.json() or express.urlencoded().
+
+### Warning
+As req.body’s shape is based on user-controlled input, all properties and values in this object are untrusted and should be validated before trusting. For example, req.body.foo.toString() may fail in multiple ways, for example foo may not be there or may not be a string, and toString may not be a function and instead a string or other user-input.
+The following example shows how to use body-parsing middleware to populate req.body.
+
+CODE EXAMPLE
+```
+const express = require('express');
+const app = express();
+app.use(express.json()); // for parsing application/jsonapp.use(express.urlencoded({ extended: true })); // for parsing application/x-www-form-urlencoded
+app.post('/profile', (req, res, next) => {  console.log(req.body);  res.json(req.body);});
+```
+
+CODE EXAMPLE
+```
+import express from 'express';
+const app = express();
+app.use(express.json()); // for parsing application/jsonapp.use(express.urlencoded({ extended: true })); // for parsing application/x-www-form-urlencoded
+app.post('/profile', (req, res, next) => {  console.log(req.body);  res.json(req.body);});
+```
+
+CODE EXAMPLE
+```
+import express, { type Express, type Request, type Response, type NextFunction } from 'express';
+const app: Express = express();
+app.use(express.json()); // for parsing application/jsonapp.use(express.urlencoded({ extended: true })); // for parsing application/x-www-form-urlencoded
+app.post('/profile', (req: Request, res: Response, next: NextFunction) => {  console.log(req.body);  res.json(req.body);});
+```
+
+### req.cookies
+Type:Object
+When using cookie-parser middleware, this property is an object that contains cookies sent by the request. If the request contains no cookies, it defaults to {}.
+
+CODE EXAMPLE
+```
+// Cookie: name=tjconsole.dir(req.cookies.name);// => "tj"
+```
+If the cookie has been signed, you have to use req.signedCookies.
+For more information, issues, or concerns, see cookie-parser.
+
+### req.fresh
+Type:Boolean
+When the response is still “fresh” in the client’s cache true is returned, otherwise false is returned to indicate that the client cache is now stale and the full response should be sent.
+When a client sends the Cache-Control: no-cache request header to indicate an end-to-end reload request, this module will return false to make handling these requests transparent.
+Further details for how cache validation works can be found in the HTTP/1.1 Caching Specification.
+
+CODE EXAMPLE
+```
+console.dir(req.fresh);// => true
+```
+
+### req.host
+Type:String
+Contains the host derived from the Host HTTP header.
+When the trust proxy setting does not evaluate to false, this property will instead get the value from the X-Forwarded-Host header field. This header can be set by the client or by the proxy.
+If there is more than one X-Forwarded-Host header in the request, the value of the first header is used. This includes a single header with comma-separated values, in which the first value is used.
+
+CODE EXAMPLE
+```
+// Host: "example.com:3000"console.dir(req.host);// => 'example.com:3000'
+// Host: "[::1]:3000"console.dir(req.host);// => '[::1]:3000'
+```
+
+### req.hostname
+Type:String
+Contains the hostname derived from the Host HTTP header.
+When the trust proxy setting does not evaluate to false, this property will instead get the value from the X-Forwarded-Host header field. This header can be set by the client or by the proxy.
+If there is more than one X-Forwarded-Host header in the request, the value of the first header is used. This includes a single header with comma-separated values, in which the first value is used.
+
+CODE EXAMPLE
+```
+// Host: "example.com:3000"console.dir(req.hostname);// => 'example.com'
+```
+
+### req.ip
+Type:String
+Contains the remote IP address of the request.
+When the trust proxy setting does not evaluate to false, the value of this property is derived from the left-most entry in the X-Forwarded-For header. This header can be set by the client or by the proxy.
+
+CODE EXAMPLE
+```
+console.dir(req.ip);// => "127.0.0.1"
+```
+
+### req.ips
+Type:String[]
+When the trust proxy setting does not evaluate to false, this property contains an array of IP addresses specified in the X-Forwarded-For request header. Otherwise, it contains an empty array. This header can be set by the client or by the proxy.
+For example, if X-Forwarded-For is client, proxy1, proxy2, req.ips would be ["client", "proxy1", "proxy2"], where proxy2 is the furthest downstream.
+
+CODE EXAMPLE
+```
+// normal request, or `trust proxy` disabled (the default)console.dir(req.ips);// => []
+// app.set('trust proxy', true) and// request header `X-Forwarded-For: client, proxy1, proxy2`console.dir(req.ips);// => ['client', 'proxy1', 'proxy2']
+```
+
+### req.method
+Type:String
+Contains a string corresponding to the HTTP method of the request: GET, POST, PUT, and so on.
+
+CODE EXAMPLE
+```
+app.use((req, res, next) => {  console.dir(req.method);  // => 'GET'  next();});
+```
+
+CODE EXAMPLE
+```
+import { type Request, type Response, type NextFunction } from 'express';
+app.use((req: Request, res: Response, next: NextFunction) => {  console.dir(req.method);  // => 'GET'  next();});
+```
+
+### req.originalUrl
+Type:String
+
+### Caution
+req.url is not a native Express property, it is inherited from Node’s http module.
+This property is much like req.url; however, it retains the original request URL, allowing you to rewrite req.url freely for internal routing purposes. For example, the “mounting” feature of app.use() will rewrite req.url to strip the mount point.
+
+CODE EXAMPLE
+```
+// GET /search?q=somethingconsole.dir(req.originalUrl);// => "/search?q=something"
+```
+req.originalUrl is available both in middleware and router objects, and is a combination of req.baseUrl and req.url. Consider following example:
+
+CODE EXAMPLE
+```
+// GET 'http://www.example.com/admin/new?sort=desc'app.use('/admin', (req, res, next) => {  console.dir(req.originalUrl); // '/admin/new?sort=desc'  console.dir(req.baseUrl); // '/admin'  console.dir(req.path); // '/new'  next();});
+```
+
+CODE EXAMPLE
+```
+import { type Request, type Response, type NextFunction } from 'express';
+// GET 'http://www.example.com/admin/new?sort=desc'app.use('/admin', (req: Request, res: Response, next: NextFunction) => {  console.dir(req.originalUrl); // '/admin/new?sort=desc'  console.dir(req.baseUrl); // '/admin'  console.dir(req.path); // '/new'  next();});
+```
+
+### req.params
+Type:Object
+This property is an object containing properties mapped to the named route “parameters”. For example, if you have the route /user/:name, then the “name” property is available as req.params.name. This object defaults to Object.create(null) when using string paths, but remains a standard object with a normal prototype when the path is defined with a regular expression.
+
+CODE EXAMPLE
+```
+// GET /user/tjconsole.dir(req.params.name);// => "tj"
+```
+Properties corresponding to wildcard parameters are arrays containing separate path segments split on /:
+
+CODE EXAMPLE
+```
+app.get('/files/*file', (req, res) => {  console.dir(req.params.file);  // GET /files/note.txt  // => [ 'note.txt' ]  // GET /files/images/image.png  // => [ 'images', 'image.png' ]});
+```
+
+CODE EXAMPLE
+```
+import { type Request, type Response } from 'express';
+app.get('/files/*file', (req: Request, res: Response) => {  console.dir(req.params.file);  // GET /files/note.txt  // => [ 'note.txt' ]  // GET /files/images/image.png  // => [ 'images', 'image.png' ]});
+```
+Parameters defined in optional segments that are not present in the request URL are omitted from req.params entirely.
+When you use a regular expression for the route definition, capture groups are provided as integer keys using req.params[n], where n is the nth capture group.
+
+CODE EXAMPLE
+```
+app.use(/^\/file\/(.*)$/, (req, res) => {  // GET /file/javascripts/jquery.js  console.dir(req.params[0]);  // => "javascripts/jquery.js"});
+```
+
+CODE EXAMPLE
+```
+import { type Request, type Response } from 'express';
+app.use(/^\/file\/(.*)$/, (req: Request, res: Response) => {  // GET /file/javascripts/jquery.js  console.dir(req.params[0]);  // => "javascripts/jquery.js"});
+```
+Named capturing groups in regular expressions behave like named route parameters. For example the group from /^\/file\/(?<path>.*)$/ expression is available as req.params.path.
+If you need to make changes to a key in req.params, use the app.param handler. Changes are applicable only to parameters already defined in the route path.
+Any changes made to the req.params object in a middleware or route handler will be reset.
+
+### Note
+Express automatically decodes the values in req.params (using decodeURIComponent).
+
+### req.path
+Type:String
+Contains the path part of the request URL.
+
+CODE EXAMPLE
+```
+// example.com/users?sort=descconsole.dir(req.path);// => "/users"
+```
+
+### Note
+When called from a middleware, the mount point is not included in req.path. See app.use() for more details.
+
+### req.protocol
+Type:String
+Contains the request protocol string: either http or (for TLS requests) https.
+When the trust proxy setting does not evaluate to false, this property will use the value of the X-Forwarded-Proto header field if present. This header can be set by the client or by the proxy.
+
+CODE EXAMPLE
+```
+console.dir(req.protocol);// => "http"
+```
+
+### req.query
+Type:Object
+This property is an object containing a property for each query string parameter in the route. When query parser is set to disabled, it is an empty object {}, otherwise it is the result of the configured query parser.
+
+### Warning
+As req.query’s shape is based on user-controlled input, all properties and values in this object are untrusted and should be validated before trusting. For example, req.query.foo.toString() may fail in multiple ways, for example foo may not be there or may not be a string, and toString may not be a function and instead a string or other user-input.
+The value of this property can be configured with the query parser application setting to work how your application needs it. A very popular query string parser is the qs module, and this is used by default. The qs module is very configurable with many settings, and it may be desirable to use different settings than the default to populate req.query:
+
+CODE EXAMPLE
+```
+const qs = require('qs');app.set('query parser', (str) =>  qs.parse(str, {    /* custom options */  }));
+```
+
+CODE EXAMPLE
+```
+import qs from 'qs';
+app.set('query parser', (str) =>  qs.parse(str, {    /* custom options */  }));
+```
+
+CODE EXAMPLE
+```
+import qs from 'qs';
+app.set('query parser', (str: string) =>  qs.parse(str, {    /* custom options */  }));
+```
+Check out the query parser application setting documentation for other customization options.
+
+### req.res
+Type:Response
+This property holds a reference to the response object that relates to this request object.
+
+CODE EXAMPLE
+```
+app.get('/', (req, res) => {  console.dir(req.res === res);  // => true  res.send('OK');});
+```
+
+CODE EXAMPLE
+```
+import { type Request, type Response } from 'express';
+app.get('/', (req: Request, res: Response) => {  console.dir(req.res === res);  // => true  res.send('OK');});
+```
+
+### req.route
+Type:Route
+Contains the currently-matched route (a Route object). For example:
+
+CODE EXAMPLE
+```
+app.get('/user/{:id}', (req, res) => {  console.dir(req.route, { depth: null });  res.send('GET');});
+```
+
+CODE EXAMPLE
+```
+import { type Request, type Response } from 'express';
+app.get('/user/{:id}', (req: Request, res: Response) => {  console.dir(req.route, { depth: null });  res.send('GET');});
+```
+Example output from the previous snippet:
+
+CODE EXAMPLE
+```
+Route {  path: '/user/{:id}',  stack: [    Layer {      handle: [Function (anonymous)],      keys: [],      name: '<anonymous>',      params: undefined,      path: undefined,      slash: false,      matchers: [ [Function: match] ],      method: 'get'    }  ],  methods: [Object: null prototype] { get: true }}
+```
+
+### req.secure
+Type:Boolean
+A Boolean property that is true if a TLS connection is established. Equivalent to the following:
+
+CODE EXAMPLE
+```
+req.protocol === 'https';
+```
+
+### req.signedCookies
+Type:Object
+When using cookie-parser middleware, this property contains signed cookies sent by the request, unsigned and ready for use. Signed cookies reside in a different object to show developer intent; otherwise, a malicious attack could be placed on req.cookie values (which are easy to spoof). Note that signing a cookie does not make it “hidden” or encrypted; but simply prevents tampering (because the secret used to sign is private).
+If no signed cookies are sent, the property defaults to {}.
+
+CODE EXAMPLE
+```
+// Cookie: user=tobi.CP7AWaXDfAKIRfH49dQzKJx7sKzzSoPq7/AcBBRVwlI3console.dir(req.signedCookies.user);// => "tobi"
+```
+For more information, issues, or concerns, see cookie-parser.
+
+### req.stale
+Type:Boolean
+Indicates whether the request is “stale,” and is the opposite of req.fresh. For more information, see req.fresh.
+
+CODE EXAMPLE
+```
+console.dir(req.stale);// => true
+```
+
+### req.subdomains
+Type:String[]
+An array of subdomains in the domain name of the request.
+
+CODE EXAMPLE
+```
+// Host: "tobi.ferrets.example.com"console.dir(req.subdomains);// => ["ferrets", "tobi"]
+```
+The application property subdomain offset, which defaults to 2, is used for determining the beginning of the subdomain segments. To change this behavior, change its value using app.set.
+
+### req.xhr
+Type:Boolean
+A Boolean property that is true if the request’s X-Requested-With header field is “XMLHttpRequest”, indicating that the request was issued by a client library such as jQuery.
+
+CODE EXAMPLE
+```
+console.dir(req.xhr);// => true
+```
+
+## Methods
+The req object also contains a number of methods that can be used to perform various tasks related to the HTTP request, such as checking the content type, retrieving header values, and more.
+
+### req.accepts()
+
+#### Arguments
+The content type(s) to check: a MIME type (such as application/json), an extension name (such as json), a comma-delimited list, or an array.
+↵Returns:String | false
+Checks if the specified content types are acceptable, based on the request’s Accept HTTP header field. The method returns the best match, or if none of the specified content types is acceptable, returns false (in which case, the application should respond with 406 "Not Acceptable").
+The type value may be a single MIME type string (such as “application/json”), an extension name such as “json”, a comma-delimited list, or an array. For a list or array, the method returns the best match (if any).
+
+CODE EXAMPLE
+```
+// Accept: text/htmlreq.accepts('html');// => "html"
+// Accept: text/*, application/jsonreq.accepts('html');// => "html"req.accepts('text/html');// => "text/html"req.accepts(['json', 'text']);// => "json"req.accepts('application/json');// => "application/json"
+// Accept: text/*, application/jsonreq.accepts('image/png');req.accepts('png');// => false
+// Accept: text/*;q=.5, application/jsonreq.accepts(['html', 'json']);// => "json"
+```
+For more information, or if you have issues or concerns, see accepts.
+
+### req.acceptsCharsets()
+
+#### Arguments
+One or more character sets to test against the request’s Accept-Charset header.
+↵Returns:String | false
+Returns the first accepted charset of the specified character sets, based on the request’s Accept-Charset HTTP header field. If none of the specified charsets is accepted, returns false.
+
+CODE EXAMPLE
+```
+// Accept-Charset: utf-8, iso-8859-1;q=0.5req.acceptsCharsets('utf-8', 'iso-8859-1');// => 'utf-8'
+req.acceptsCharsets('us-ascii');// => false
+```
+For more information, or if you have issues or concerns, see accepts.
+
+### req.acceptsEncodings()
+
+#### Arguments
+One or more encodings to test against the request’s Accept-Encoding header.
+↵Returns:String | false
+Returns the first accepted encoding of the specified encodings, based on the request’s Accept-Encoding HTTP header field. If none of the specified encodings is accepted, returns false.
+
+CODE EXAMPLE
+```
+// Accept-Encoding: gzip, deflatereq.acceptsEncodings('gzip', 'deflate');// => 'gzip'
+req.acceptsEncodings('br');// => false
+```
+For more information, or if you have issues or concerns, see accepts.
+
+### req.acceptsLanguages()
+
+#### Arguments
+One or more languages to test against the request’s Accept-Language header. If omitted, all accepted languages are returned as an array.
+↵Returns:String | String[] | false
+Returns the first accepted language of the specified languages, based on the request’s Accept-Language HTTP header field. If none of the specified languages is accepted, returns false.
+If no lang argument is given, then req.acceptsLanguages() returns all languages from the HTTP Accept-Language header as an Array.
+
+CODE EXAMPLE
+```
+// Accept-Language: en;q=0.8, esreq.acceptsLanguages('en', 'es');// => 'es'
+req.acceptsLanguages();// => ['es', 'en']
+```
+For more information, or if you have issues or concerns, see accepts.
+Express (5.x) source: request.js line 172
+Accepts (2.0) source: index.js line 195
+
+### req.get()
+
+#### Arguments
+The name of the HTTP request header to read (case-insensitive). Referrer and Referer are interchangeable.
+↵Returns:String | undefined
+Returns the specified HTTP request header field (case-insensitive match). The Referrer and Referer fields are interchangeable.
+
+CODE EXAMPLE
+```
+req.get('Content-Type');// => "text/plain"
+req.get('content-type');// => "text/plain"
+req.get('Something');// => undefined
+```
+Aliased as req.header(field).
+
+### req.is()
+
+#### Arguments
+The MIME type(s) or extension name(s) to match against the request’s Content-Type header.
+↵Returns:String | false | null
+Returns the matching content type if the incoming request’s “Content-Type” HTTP header field matches the MIME type specified by the type parameter. If the request has no body, returns null. Returns false otherwise.
+
+CODE EXAMPLE
+```
+// With Content-Type: text/html; charset=utf-8req.is('html'); // => 'html'req.is('text/html'); // => 'text/html'req.is('text/*'); // => 'text/*'
+// When Content-Type is application/jsonreq.is('json'); // => 'json'req.is('application/json'); // => 'application/json'req.is('application/*'); // => 'application/*'
+// Using arrays// When Content-Type is application/jsonreq.is(['json', 'html']); // => 'json'
+// Using multiple arguments// When Content-Type is application/jsonreq.is('json', 'html'); // => 'json'
+req.is('html'); // => falsereq.is(['xml', 'yaml']); // => falsereq.is('xml', 'yaml'); // => false
+```
+For more information, or if you have issues or concerns, see type-is.
+
+### req.range()
+
+#### Arguments
+The maximum size of the resource.
+Options for parsing the Range header.
+Specify if overlapping and adjacent ranges should be combined. When true, ranges are combined and returned as if they were specified that way in the header.
+↵Returns:Array | Number
+Range header parser.
+An array of ranges will be returned or negative numbers indicating an error parsing.
+- -2 signals a malformed header string
+- -1 signals an unsatisfiable range
+
+CODE EXAMPLE
+```
+// parse header from requestconst range = req.range(1000);
+// the type of the rangeif (range.type === 'bytes') {  // the ranges  range.forEach((r) => {    // do something with r.start and r.end  });}
+```

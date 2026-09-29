@@ -1,0 +1,7 @@
+# The concurrent package — Python 3.14.7 documentation
+SOURCE: https://docs.python.org/3/library/concurrent.html
+
+# The concurrent package
+This package contains the following modules:
+concurrent.futures – Launching parallel tasks
+concurrent.interpreters – Multiple interpreters in the same process

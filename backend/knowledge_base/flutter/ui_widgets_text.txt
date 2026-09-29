@@ -1,0 +1,12 @@
+# Text widgets
+SOURCE: https://docs.flutter.dev/ui/widgets/text
+Flutter 3.47 is here! Read the blog post.
+
+# Text widgets
+A catalog of Flutter's text widgets. Display and style text.
+Display and style text.
+The text style to apply to descendant Text widgets without explicit style.
+The RichText widget displays text that uses multiple different styles. The text to display is described using a tree of TextSpan objects, each of which...
+A run of text with a single style.
+Find more widgets in the widget catalog.
+Unless stated otherwise, the documentation on this site reflects Flutter 3.47. Page last updated on 2026-05-31. Report an issue.

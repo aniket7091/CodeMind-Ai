@@ -1,0 +1,35 @@
+# Host ASP.NET Core in Docker containers | Microsoft Learn
+SOURCE: https://learn.microsoft.com/en-us/aspnet/core/host-and-deploy/docker/
+Note
+Access to this page requires authorization. You can try signing in or changing directories.
+Access to this page requires authorization. You can try changing directories.
+
+# Host ASP.NET Core in Docker containers
+Note
+This isn't the latest version of this article. For the current release, see the .NET 10 version of this article.
+Warning
+This version of ASP.NET Core is no longer supported. For more information, see the .NET and .NET Core Support Policy. For the current release, see the .NET 10 version of this article.
+The following articles are available for learning about hosting ASP.NET Core apps in Docker:
+Introduction to Containers and Docker See how containerization is an approach to software development in which an application or service, its dependencies, and its configuration are packaged together as a container image. The image can be tested and then deployed to a host.
+What is Docker Discover how Docker is an open-source project for automating the deployment of apps as portable, self-sufficient containers that can run on the cloud or on-premises.
+Docker Terminology Learn terms and definitions for Docker technology.
+Docker containers, images, and registries Find out how Docker container images are stored in an image registry for consistent deployment across environments.
+Run an ASP.NET Core app in Docker containers Learn how to build and dockerize an ASP.NET Core app. Explore Docker images maintained by Microsoft and examine use cases.
+.NET Docker samples Samples and guidance that demonstrate how to use .NET and Docker for development, testing and production.
+Visual Studio Container Tools Discover how Visual Studio supports building, debugging, and running containerized apps, including an ASP.NET Core example. Both Windows and Linux containers are supported.
+Publish to Azure Container Registry Find out how to use the Visual Studio Container Tools extension to deploy an ASP.NET Core app to a Docker host on Azure using PowerShell.
+Configure ASP.NET Core to work with proxy servers and load balancers Additional configuration might be required for apps hosted behind proxy servers and load balancers. Passing requests through a proxy often obscures information about the original request, such as the scheme and client IP. It might be necessary to forward some information about the request manually to the app.
+GC using Docker and small containers Discusses GC selection with small containers.
+
+## System.IO.IOException: The configured user limit (128) on the number of inotify instances has been reached
+Disabling reloadOnChange can significantly reduce the number of opened files. To disable reloading configuration files, set the environment variable DOTNET_HOSTBUILDER__RELOADCONFIGONCHANGE=false
+For alternative approaches or to leave feedback on this problem, see this GitHub issue.
+ASP.NET Core
+
+## Feedback
+Was this page helpful?
+Need help with this topic?
+Want to try using Ask Learn to clarify or guide you through this topic?
+
+## Additional resources
+- Last updated on 2026-08-05

@@ -1,0 +1,581 @@
+# Validation | NestJS - A progressive Node.js framework
+SOURCE: https://docs.nestjs.com/application/validation
+
+### Validation
+Validate every piece of data a web application receives before acting on it. Nest provides several pipes that validate incoming requests automatically:
+- ValidationPipe validates classes decorated with class-validator rules.
+- StandardSchemaValidationPipe validates schemas written with Zod, Valibot, ArkType, or any other Standard Schema compatible library.
+- ParseIntPipe, ParseBoolPipe, ParseArrayPipe, and ParseUUIDPipe validate and convert individual values.
+
+#### Overview#
+The Pipes chapter explains how pipes work and how to bind them to parameters, route handlers, controllers, or the whole application. This chapter builds on it and covers real-world use of the two validation pipes.
+The pipes differ in where the validation rules live:
+- With ValidationPipe, rules are decorators on a DTO class, and the class is also the parameter's TypeScript type. This approach integrates with the mapped types utilities and with the Swagger CLI plugin.
+- With StandardSchemaValidationPipe, rules are a schema object, and the parameter's TypeScript type is inferred from the schema. Schemas compose with the methods of their library, and no class or reflection metadata is involved.
+Both pipes can be registered at the same time. ValidationPipe only validates parameters typed with a class, and StandardSchemaValidationPipe only validates parameters that declare a schema, so you can adopt schemas incrementally in an existing application.
+
+#### Using the built-in ValidationPipe#
+To begin using it, first install the required dependencies.
+
+CODE EXAMPLE
+LANGUAGE: bash
+```
+$ npm i --save class-validator class-transformer
+```
+Because this pipe uses the class-validator and class-transformer libraries, it supports many options. Pass them in a configuration object to the pipe's constructor. The pipe's own options are:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+export interface ValidationPipeOptions extends ValidatorOptions {
+  transform?: boolean;
+  disableErrorMessages?: boolean;
+  exceptionFactory?: (errors: ValidationError[]) => any;
+  errorFormat?: 'list' | 'grouped';
+}
+```
+In addition to these, all class-validator options (inherited from the ValidatorOptions interface) are available:
+
+#### Auto-validation#
+Start by binding ValidationPipe at the application level, so that every endpoint is protected from receiving invalid data.
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule);
+  app.useGlobalPipes(new ValidationPipe());
+  await app.listen(process.env.PORT ?? 3000);
+}
+await bootstrap();
+```
+To test the pipe, create a basic endpoint:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+@Post()
+create(@Body() createUserDto: CreateUserDto) {
+  return 'This action adds a new user';
+}
+```
+Next, add validation rules to the CreateUserDto with the decorators provided by the class-validator package (see the full list). Every route that uses CreateUserDto then enforces these rules.
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+import { IsEmail, IsNotEmpty } from 'class-validator';
+
+export class CreateUserDto {
+  @IsEmail()
+  email: string;
+
+  @IsNotEmpty()
+  password: string;
+}
+```
+With these rules in place, a request whose body contains an invalid email property receives a 400 Bad Request response with the following body:
+
+CODE EXAMPLE
+LANGUAGE: json
+```
+{
+  "statusCode": 400,
+  "error": "Bad Request",
+  "message": ["email must be an email"]
+}
+```
+ValidationPipe validates other parts of the request as well. For example, to accept only numeric values for the :id path parameter, use the following construct:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+@Get(':id')
+findOne(@Param() params: FindOneParams) {
+  return 'This action returns a user';
+}
+```
+Like a DTO, FindOneParams is a class that defines validation rules with class-validator:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+import { IsNumberString } from 'class-validator';
+
+export class FindOneParams {
+  @IsNumberString()
+  id: string;
+}
+```
+
+#### Disable detailed errors#
+Error messages explain what was wrong with a request, but some production environments prefer not to expose them. To disable detailed errors, pass an options object to the ValidationPipe:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+app.useGlobalPipes(
+  new ValidationPipe({
+    disableErrorMessages: true,
+  }),
+);
+```
+As a result, the response body no longer contains detailed error messages.
+
+#### Stripping properties#
+ValidationPipe can also filter out properties that the route handler should not receive. When you whitelist the acceptable properties, any property not included in the whitelist is stripped from the resulting object. For example, if the handler expects email and password, but a request also includes an age property, age is removed from the resulting DTO. To enable this behavior, set whitelist to true.
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+app.useGlobalPipes(
+  new ValidationPipe({
+    whitelist: true,
+  }),
+);
+```
+With this option enabled, properties without any decorator in the validation class are removed.
+Alternatively, you can reject requests that contain non-whitelisted properties with an error response. To do so, set forbidNonWhitelisted to true in addition to whitelist.
+Learn the right way! 80+ chapters 5+ hours of videos Official certificate Deep-dive sessions Explore official courses
+
+## Learn the right way!
+- 80+ chapters
+- 5+ hours of videos
+- Official certificate
+- Deep-dive sessions
+
+#### Transform payload objects#
+Payloads arrive over the network as plain JavaScript objects. ValidationPipe can transform them into instances of their DTO classes. To enable auto-transformation, set transform to true. You can do this at the method level:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+@Post()
+@UsePipes(new ValidationPipe({ transform: true }))
+async create(@Body() createCatDto: CreateCatDto) {
+  this.catsService.create(createCatDto);
+}
+```
+To enable this behavior globally, set the option on a global pipe:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+app.useGlobalPipes(
+  new ValidationPipe({
+    transform: true,
+  }),
+);
+```
+With auto-transformation enabled, ValidationPipe also converts primitive types. In the following example, the findOne() method takes the id path parameter as an argument:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+@Get(':id')
+findOne(@Param('id') id: number) {
+  console.log(typeof id === 'number'); // true
+  return 'This action returns a user';
+}
+```
+Path parameters and query parameters always arrive as strings. Because the method signature declares id as a number, ValidationPipe converts the string identifier to a number.
+
+#### Explicit conversion#
+The previous section showed how ValidationPipe implicitly converts query and path parameters based on their declared types. That conversion requires auto-transformation to be enabled.
+With auto-transformation disabled, you can convert values explicitly with ParseIntPipe or ParseBoolPipe. There is no ParseStringPipe, because path and query parameters are already strings.
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+@Get(':id')
+findOne(
+  @Param('id', ParseIntPipe) id: number,
+  @Query('sort', ParseBoolPipe) sort: boolean,
+) {
+  console.log(typeof id === 'number'); // true
+  console.log(typeof sort === 'boolean'); // true
+  return 'This action returns a user';
+}
+```
+
+#### Mapped types#
+Features such as CRUD (Create/Read/Update/Delete) often need several variants of a base type. Nest provides utility functions that perform these type transformations.
+Input validation types (DTOs) often come in create and update variants of the same type: the create variant requires all fields, while the update variant makes them optional. The mapped types utilities derive such variants without repeating the property declarations or their validation decorators. Consider the following create type:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+export class CreateCatDto {
+  name: string;
+  age: number;
+  breed: string;
+}
+```
+The PartialType() function returns a type (class) with all the properties of the input type set to optional:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+export class UpdateCatDto extends PartialType(CreateCatDto) {}
+```
+The PickType() function constructs a type from a subset of the input type's properties:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+export class UpdateCatAgeDto extends PickType(CreateCatDto, ['age'] as const) {}
+```
+The OmitType() function constructs a type with every property of the input type except the listed ones. The second argument is an array of property names:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+export class UpdateCatDto extends OmitType(CreateCatDto, ['name'] as const) {}
+```
+The IntersectionType() function combines the properties of two types into one new type (class). For example, given an additional type:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+export class AdditionalCatInfo {
+  color: string;
+}
+```
+The following type contains the properties of both:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+export class UpdateCatDto extends IntersectionType(
+  CreateCatDto,
+  AdditionalCatInfo,
+) {}
+```
+The type mapping utility functions are composable. For example, the following type has all of the properties of CreateCatDto except name, all set to optional:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+export class UpdateCatDto extends PartialType(
+  OmitType(CreateCatDto, ['name'] as const),
+) {}
+```
+
+#### Parsing and validating arrays#
+TypeScript does not emit metadata for generic types such as arrays, so ValidationPipe cannot validate the elements of an array parameter. In the following code, the elements of createUserDtos are not validated:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+@Post()
+createBulk(@Body() createUserDtos: CreateUserDto[]) {
+  return 'This action adds new users';
+}
+```
+To validate the array, create a dedicated class with a property that wraps the array, or use the ParseArrayPipe:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+@Post()
+createBulk(
+  @Body(new ParseArrayPipe({ items: CreateUserDto }))
+  createUserDtos: CreateUserDto[],
+) {
+  return 'This action adds new users';
+}
+```
+ParseArrayPipe is also useful for parsing query parameters. Consider a findByIds() method that returns users based on identifiers passed in the query string:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+@Get()
+findByIds(
+  @Query('ids', new ParseArrayPipe({ items: Number, separator: ',' }))
+  ids: number[],
+) {
+  return 'This action returns users by ids';
+}
+```
+This construction parses and validates the query parameters of a request such as the following:
+
+CODE EXAMPLE
+LANGUAGE: bash
+```
+GET /?ids=1,2,3
+```
+
+#### Schema-based validation#
+The StandardSchemaValidationPipe validates values against schemas instead of decorated classes. It accepts any schema that implements the Standard Schema specification, which includes Zod, Valibot, and ArkType. The schema is the single source of truth for a payload: it validates the value at runtime, and its inferred type is the handler parameter's TypeScript type. The examples in this section use Zod.
+
+CODE EXAMPLE
+LANGUAGE: bash
+```
+$ npm i --save zod
+```
+Define a schema and infer the DTO type from it:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+import { z } from 'zod';
+
+export const createUserSchema = z.object({
+  email: z.email(),
+  password: z.string().min(8),
+  displayName: z.string().max(50).optional(),
+});
+
+export type CreateUserDto = z.infer<typeof createUserSchema>;
+```
+Next, bind the pipe at the application level:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+import { StandardSchemaValidationPipe } from '@nestjs/common';
+import { NestFactory } from '@nestjs/core';
+import { AppModule } from './app.module.js';
+
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule);
+  app.useGlobalPipes(new StandardSchemaValidationPipe());
+  await app.listen(process.env.PORT ?? 3000);
+}
+await bootstrap();
+```
+Then attach the schema to a parameter with the schema option of the parameter decorator:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+@Post()
+create(@Body({ schema: createUserSchema }) createUserDto: CreateUserDto) {
+  return this.usersService.create(createUserDto);
+}
+```
+The pipe validates only the parameters that declare a schema and passes every other value through unchanged, so binding it globally is safe. If the request body doesn't match the schema, the application responds with 400 Bad Request. Each message is prefixed with the path of the invalid property:
+
+CODE EXAMPLE
+LANGUAGE: json
+```
+{
+  "statusCode": 400,
+  "error": "Bad Request",
+  "message": [
+    "email: Invalid email address",
+    "password: Too small: expected string to have >=8 characters"
+  ]
+}
+```
+The schema option is supported by @Body(), @Query(), and @Param(), as well as by @MessageBody() in gateways and @Payload() in microservices. Pass it as the only argument to validate the whole object, or after a property name to validate a single value:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+@Post('invitations')
+invite(@Body('email', { schema: z.email() }) email: string) {
+  return this.usersService.invite(email);
+}
+```
+
+#### Coercion and transformation#
+Path parameters and query parameters always arrive as strings. Coercing schemas, such as z.coerce.number(), convert them before validating:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+@Get(':id')
+findOne(@Param('id', { schema: z.coerce.number().int().positive() }) id: number) {
+  return this.usersService.findOne(id);
+}
+```
+Schemas can also apply defaults and transformations. The following schema describes the query string of a paginated list:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+import { z } from 'zod';
+
+export const listUsersQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  search: z.string().trim().optional(),
+});
+
+export type ListUsersQuery = z.infer<typeof listUsersQuerySchema>;
+```
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+@Get()
+findAll(@Query({ schema: listUsersQuerySchema }) query: ListUsersQuery) {
+  return this.usersService.findAll(query);
+}
+```
+For the request GET /users?page=2&search=%20kamil%20, the handler receives page as the number 2, limit as the default 20, and search as the trimmed string 'kamil'.
+By default, the pipe passes the schema's output to the handler, so coercion, defaults, and transformations take effect. To validate the value but pass the original input through unchanged, set transform to false. In that case, type the parameter with the schema's input type (z.input<typeof schema> in Zod).
+
+#### Unknown properties#
+How a schema treats properties it doesn't declare is decided by the schema itself, not by the pipe. In Zod:
+- z.object() strips unknown properties, like the whitelist option of ValidationPipe.
+- z.strictObject() rejects them, like the forbidNonWhitelisted option. The error message is Unrecognized key: "age".
+- z.looseObject() keeps them.
+
+#### Deriving schemas#
+The mapped types utilities derive new DTO classes from existing ones. With schemas, the library's own methods serve the same purpose:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+import { z } from 'zod';
+import { createUserSchema } from './create-user.dto.js';
+
+// All properties optional, like PartialType()
+export const updateUserSchema = createUserSchema.partial();
+
+// Only the listed properties, like PickType()
+export const changeEmailSchema = createUserSchema.pick({ email: true });
+
+// Every property except the listed ones, like OmitType()
+export const publicProfileSchema = createUserSchema.omit({ password: true });
+
+// Additional properties, like IntersectionType()
+export const createAdminSchema = createUserSchema.extend({
+  role: z.enum(['admin', 'editor']),
+});
+
+export type UpdateUserDto = z.infer<typeof updateUserSchema>;
+```
+Arrays need no special handling either. Wrap the item schema in z.array(), and every element is validated:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+@Post('bulk')
+createBulk(
+  @Body({ schema: z.array(createUserSchema) }) createUserDtos: CreateUserDto[],
+) {
+  return this.usersService.createMany(createUserDtos);
+}
+```
+A message for an invalid element is prefixed with its index, e.g., 1.email: Invalid email address.
+
+#### Validating custom decorators#
+Parameter decorators created with createParamDecorator() accept the schema option too. For example, the following decorator extracts a tenant identifier from a request header:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+import { createParamDecorator, ExecutionContext } from '@nestjs/common';
+
+export const TenantId = createParamDecorator(
+  (data: unknown, ctx: ExecutionContext) =>
+    ctx.switchToHttp().getRequest().headers['x-tenant-id'],
+);
+```
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+@Get()
+findAll(@TenantId({ schema: z.uuid() }) tenantId: string) {
+  return this.projectsService.findAll(tenantId);
+}
+```
+The pipe skips custom decorators unless you enable the validateCustomDecorators option:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+app.useGlobalPipes(
+  new StandardSchemaValidationPipe({
+    validateCustomDecorators: true,
+  }),
+);
+```
+
+#### Schema validation options#
+The StandardSchemaValidationPipe constructor accepts the following options:
+Use exceptionFactory to change the shape of the error response. Each issue has a message and, for nested values, a path whose segments are either property keys or objects with a key property:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+app.useGlobalPipes(
+  new StandardSchemaValidationPipe({
+    exceptionFactory: (issues) =>
+      new UnprocessableEntityException({
+        message: 'Validation failed',
+        errors: issues.map((issue) => ({
+          path: issue.path
+            ?.map((segment) => (typeof segment === 'object' ? segment.key : segment))
+            .join('.'),
+          message: issue.message,
+        })),
+      }),
+  }),
+);
+```
+With this factory, an invalid request produces a 422 Unprocessable Entity response:
+
+CODE EXAMPLE
+LANGUAGE: json
+```
+{
+  "message": "Validation failed",
+  "errors": [
+    { "path": "email", "message": "Invalid email address" },
+    { "path": "password", "message": "Too small: expected string to have >=8 characters" }
+  ]
+}
+```
+
+#### Other schema libraries#
+Nothing in the pipe is specific to Zod. The same schema option accepts a Valibot schema:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+import * as v from 'valibot';
+
+export const createUserSchema = v.object({
+  email: v.pipe(v.string(), v.email()),
+  password: v.pipe(v.string(), v.minLength(8)),
+});
+
+export type CreateUserDto = v.InferOutput<typeof createUserSchema>;
+```
+Or an ArkType schema:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+import { type } from 'arktype';
+
+export const createUserSchema = type({
+  email: 'string.email',
+  password: 'string >= 8',
+});
+
+export type CreateUserDto = typeof createUserSchema.infer;
+```
+Error messages come from the library, so their wording differs between libraries.
+A working example is available here.
+
+#### WebSockets and Microservices#
+While this chapter shows examples using HTTP applications (e.g., Express or Fastify), both ValidationPipe and StandardSchemaValidationPipe work the same for WebSockets and microservices, regardless of the transport. By default, both throw an HTTP exception when validation fails. To report errors in a way the transport understands, return a WsException or an RpcException from the exceptionFactory option:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+new StandardSchemaValidationPipe({
+  exceptionFactory: (issues) =>
+    new WsException(issues.map((issue) => issue.message)),
+});
+```
+
+#### Learn more#
+Read more about custom validators, error messages, and available decorators in the class-validator repository. For schema libraries, see the Zod, Valibot, and ArkType documentation, and the list of Standard Schema compatible libraries.

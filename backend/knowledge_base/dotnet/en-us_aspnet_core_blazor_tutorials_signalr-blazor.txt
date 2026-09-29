@@ -1,0 +1,859 @@
+# Use ASP.NET Core SignalR with Blazor | Microsoft Learn
+SOURCE: https://learn.microsoft.com/en-us/aspnet/core/blazor/tutorials/signalr-blazor
+Note
+Access to this page requires authorization. You can try signing in or changing directories.
+Access to this page requires authorization. You can try changing directories.
+
+# Use ASP.NET Core SignalR with Blazor
+Note
+This isn't the latest version of this article. For the current release, see the .NET 10 version of this article.
+Warning
+This version of ASP.NET Core is no longer supported. For more information, see the .NET and .NET Core Support Policy. For the current release, see the .NET 10 version of this article.
+This tutorial provides a basic working experience for building a real-time app using SignalR with Blazor. This article is useful for developers who are already familiar with SignalR and are seeking to understand how to use SignalR in a Blazor app. For detailed guidance on the SignalR and Blazor frameworks, see the following reference documentation sets and the API documentation:
+- Overview of ASP.NET Core SignalR
+- ASP.NET Core Blazor
+- .NET API browser
+Learn how to:
+- Create a Blazor app
+- Add the SignalR client library
+- Add a SignalR hub
+- Add SignalR services and an endpoint for the SignalR hub
+- Add a Razor component code for chat
+At the end of this tutorial, you'll have a working chat app.
+
+## Prerequisites
+- Visual Studio
+- Visual Studio Code
+- .NET CLI
+Visual Studio (latest release) with the ASP.NET and web development workload
+Install the latest releases of the following:
+- Visual Studio Code
+- C# Dev Kit
+- .NET SDK
+For more information, see Debug ASP.NET Core Blazor apps.
+The Visual Studio Code instructions use the .NET CLI for ASP.NET Core development functions such as project creation. You can follow these instructions on macOS, Linux, or Windows and with any code editor. Minor changes may be required if you use an integrated development environment (IDE) other than Visual Studio Code.
+.NET SDK (latest release)
+
+## Sample app
+Downloading the tutorial's sample chat app isn't required for this tutorial. The sample app is the final, working app produced by following the steps of this tutorial. When you open the samples repository, open the version folder that you plan to target and find the sample named BlazorSignalRApp.
+Downloading the tutorial's sample chat app isn't required for this tutorial. The sample app is the final, working app produced by following the steps of this tutorial. When you open the samples repository, open the version folder that you plan to target and find the sample named BlazorWebAssemblySignalRApp.
+View or download sample code (how to download)
+
+## Create a Blazor Web App
+Follow the guidance for your choice of tooling:
+- Visual Studio
+- Visual Studio Code
+- .NET CLI
+Note
+Visual Studio 2022 or later and .NET 8 or later SDK are required.
+In Visual Studio:
+- Select Create a new project from the Start Window or select File > New > Project from the menu bar.
+- In the Create a new project dialog, select Blazor Web App from the list of project templates. Select the Next button.
+- In the Configure your new project dialog, name the project BlazorSignalRApp in the Project name field, including matching the capitalization. Using this exact project name is important to ensure that the namespaces match for code that you copy from the tutorial into the app that you're building.
+- Confirm that the Location for the app is suitable. Leave the Place solution and project in the same directory checkbox selected. Select the Next button.
+- In the Additional information dialog, use the following settings:
+- Framework: Confirm that the latest framework is selected. If Visual Studio's Framework dropdown list doesn't include the latest available .NET framework, update Visual Studio and restart the tutorial.
+- Authentication type: None
+- Configure for HTTPS: Selected
+- Interactive render mode: WebAssembly
+- Interactivity location: Per page/component
+- Include sample pages: Selected
+- Do not use top-level statements: Not selected
+- Use the .dev.localhost TLD in the application URL: Not selected
+- Select Create.
+This tutorial assumes that you have familiarity with VS Code. If you're new to VS Code, see the VS Code documentation. The videos listed by the Introductory Videos page are designed to give you an overview of VS Code's features.
+In VS Code:
+Go to the Explorer view and select the Create .NET Project button. Alternatively, you can bring up the Command Palette using Ctrl+Shift+P, and then type ".NET" and find and select the .NET: New Project command.
+Select the Blazor Web App project template from the list.
+In the Project Location dialog, create or select a folder for the project.
+In the Command Palette, name the project BlazorSignalRApp, including matching the capitalization. Using this exact project name is important to ensure that the namespaces match for code that you copy from the tutorial into the app that you're building.
+Adjust the project's options by selecting Show all template options.
+Change Interactive render mode to WebAssembly.
+After the preceding changes are made, the Command Palette shows the following:
+- Framework: Confirm that the latest framework is selected. If Visual Studio's Framework dropdown list doesn't include the latest available .NET framework, update Visual Studio and restart the tutorial.
+- Authentication type: None
+- Configure for HTTPS: Selected
+- Interactive render mode: WebAssembly
+- Interactivity location: Per page/component
+- Include sample pages: Selected
+- Do not use top-level statements: Not selected
+- Use the .dev.localhost TLD in the application URL: Not selected
+Select Create project from the Command Palette.
+In a command shell:
+Change to the directory using the cd command to where you want to create the project folder (for example, cd c:/users/Bernie_Kopell/Documents).
+Use the dotnet new command with the blazor project template to create a new Blazor Web App project. The -o|--output option passed to the command creates the project in a new folder named BlazorSignalRApp at the current directory location. Pass the -int|--interactivity option with WebAssembly to adopt client-side rendering (CSR). Pass the -ai|--all-interactive option with False to adopt per-page/component interactivity location.
+Important
+Name the project BlazorSignalRApp, including matching the capitalization, so the namespaces match for code that you copy from the tutorial to the app as you follow the tutorial.
+
+CODE EXAMPLE
+LANGUAGE: dotnetcli
+```
+dotnet new blazor -o BlazorSignalRApp -int WebAssembly -ai False
+```
+The guidance in this article uses a WebAssembly component for the SignalR client because it doesn't make sense to use SignalR to connect to a hub from an Interactive Server component in the same app, as that can lead to server port exhaustion.
+
+## Add the SignalR client library
+- Visual Studio
+- Visual Studio Code
+- .NET CLI
+In Solution Explorer, right-click the BlazorSignalRApp.Client project and select Manage NuGet Packages.
+In the Manage NuGet Packages dialog, confirm that the Package source is set to nuget.org.
+With Browse selected, type Microsoft.AspNetCore.SignalR.Client in the search box.
+In the search results, select the latest release of the Microsoft.AspNetCore.SignalR.Client package. Select Install.
+If the Preview Changes dialog appears, select OK.
+If the License Acceptance dialog appears, select I Accept if you agree with the license terms.
+In the Terminal (Terminal > New Terminal from the menu bar opened to the BlazorSignalRApp.Client project using cd BlazorSignalRApp.Client), execute the following command:
+
+CODE EXAMPLE
+LANGUAGE: powershell
+```
+dotnet add package Microsoft.AspNetCore.SignalR.Client
+```
+To add an earlier version of the package, supply the --version {VERSION} option, where the {VERSION} placeholder is the version of the package to add.
+In a command shell opened to the BlazorSignalRApp.Client project, execute the following command:
+
+CODE EXAMPLE
+LANGUAGE: dotnetcli
+```
+dotnet add package Microsoft.AspNetCore.SignalR.Client
+```
+To add an earlier version of the package, supply the --version {VERSION} option, where the {VERSION} placeholder is the version of the package to add.
+
+## Add a SignalR hub
+In the server BlazorSignalRApp project, create a Hubs (plural) folder and add the following ChatHub class (Hubs/ChatHub.cs):
+
+CODE EXAMPLE
+LANGUAGE: csharp
+```
+using Microsoft.AspNetCore.SignalR;
+
+namespace BlazorSignalRApp.Hubs;
+
+public class ChatHub : Hub
+{
+    public async Task SendMessage(string user, string message)
+    {
+        await Clients.All.SendAsync("ReceiveMessage", user, message);
+    }
+}
+```
+
+## Add services and an endpoint for the SignalR hub
+Open the Program file of the server BlazorSignalRApp project.
+Add the namespaces for Microsoft.AspNetCore.ResponseCompression and the ChatHub class to the top of the file:
+
+CODE EXAMPLE
+LANGUAGE: csharp
+```
+using Microsoft.AspNetCore.ResponseCompression;
+using BlazorSignalRApp.Hubs;
+```
+Add SignalR and response compression middleware services:
+
+CODE EXAMPLE
+LANGUAGE: csharp
+```
+builder.Services.AddSignalR();
+
+builder.Services.AddResponseCompression(opts =>
+{
+   opts.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(
+       [ "application/octet-stream" ]);
+});
+```
+Use response compression middleware at the top of the processing pipeline's configuration. Place the following line of code immediately after the line that builds the app (var app = builder.Build();):
+
+CODE EXAMPLE
+LANGUAGE: csharp
+```
+app.UseResponseCompression();
+```
+Add an endpoint for the hub:
+
+CODE EXAMPLE
+LANGUAGE: csharp
+```
+app.MapHub<ChatHub>("/chathub");
+```
+
+## Add Razor component code for chat
+Add the following Pages/Chat.razor file to the BlazorSignalRApp.Client project:
+
+CODE EXAMPLE
+LANGUAGE: razor
+```
+@page "/chat"
+@rendermode InteractiveWebAssembly
+@using Microsoft.AspNetCore.SignalR.Client
+@inject NavigationManager Navigation
+@implements IAsyncDisposable
+
+<PageTitle>Chat</PageTitle>
+
+<div class="form-group">
+    <label>
+        User:
+        <input @bind="userInput" />
+    </label>
+</div>
+<div class="form-group">
+    <label>
+        Message:
+        <input @bind="messageInput" size="50" />
+    </label>
+</div>
+<button @onclick="Send" disabled="@(!IsConnected)">Send</button>
+
+<hr>
+
+<ul id="messagesList">
+    @foreach (var message in messages)
+    {
+        <li>@message</li>
+    }
+</ul>
+
+@code {
+    private HubConnection? hubConnection;
+    private List<string> messages = [];
+    private string? userInput;
+    private string? messageInput;
+
+    protected override async Task OnInitializedAsync()
+    {
+        hubConnection = new HubConnectionBuilder()
+            .WithUrl(Navigation.ToAbsoluteUri("/chathub"))
+            .Build();
+
+        hubConnection.On<string, string>("ReceiveMessage", (user, message) =>
+        {
+            var encodedMsg = $"{user}: {message}";
+            messages.Add(encodedMsg);
+            InvokeAsync(StateHasChanged);
+        });
+
+        await hubConnection.StartAsync();
+    }
+
+    private async Task Send()
+    {
+        if (hubConnection is not null)
+        {
+            await hubConnection.SendAsync("SendMessage", userInput, messageInput);
+        }
+    }
+
+    public bool IsConnected =>
+        hubConnection?.State == HubConnectionState.Connected;
+
+    public async ValueTask DisposeAsync()
+    {
+        if (hubConnection is not null)
+        {
+            await hubConnection.DisposeAsync();
+        }
+    }
+}
+```
+Add an entry to the NavMenu component to reach the chat page. In Components/Layout/NavMenu.razor immediately after the <div> block for the Weather component, add the following <div> block:
+
+CODE EXAMPLE
+LANGUAGE: razor
+```
+<div class="nav-item px-3">
+    <NavLink class="nav-link" href="chat">
+        <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Chat
+    </NavLink>
+</div>
+```
+Note
+Disable response compression middleware in the Development environment when using Hot Reload. For more information, see ASP.NET Core Blazor SignalR guidance.
+
+## Run the app
+Follow the guidance for your tooling:
+- Visual Studio
+- Visual Studio Code
+- .NET CLI
+With the server BlazorSignalRApp project selected in Solution Explorer, press F5 to run the app with debugging or Ctrl+F5 to run the app without debugging.
+Press F5 to run the app with debugging or Ctrl+F5 to run the app without debugging.
+In a command shell opened to the root folder of the server BlazorSignalRApp project, execute the following command:
+
+CODE EXAMPLE
+LANGUAGE: dotnetcli
+```
+dotnet watch
+```
+Copy the URL from the address bar, open another browser instance or tab, and paste the URL in the address bar.
+Choose either browser, enter a name and message, and select the button to send the message. The name and message are displayed on both pages instantly:
+Quotes: Star Trek VI: The Undiscovered Country ©1991 Paramount
+
+## Hosted Blazor WebAssembly experience
+
+### Create the app
+Follow the guidance for your choice of tooling to create a hosted Blazor WebAssembly app:
+- Visual Studio
+- Visual Studio Code
+- .NET CLI
+Note
+Visual Studio 2022 or later and .NET or later 6 SDK are required.
+Create a new project.
+Choose the Blazor WebAssembly App template. Select Next.
+Type BlazorWebAssemblySignalRApp in the Project name field. Confirm the Location entry is correct or provide a location for the project. Select Next.
+In the Additional information dialog, select the ASP.NET Core Hosted checkbox.
+Select Create.
+Confirm that a hosted Blazor WebAssembly app was created: In Solution Explorer, confirm the presence of a Client project and a Server project. If the two projects aren't present, start over and confirm selection of the ASP.NET Core Hosted checkbox before selecting Create.
+In a command shell, execute the following command:
+
+CODE EXAMPLE
+LANGUAGE: dotnetcli
+```
+dotnet new blazorwasm -ho -o BlazorWebAssemblySignalRApp
+```
+The -ho|--hosted option creates a hosted Blazor WebAssembly solution. For information on configuring VS Code assets in the .vscode folder, see the Linux operating system guidance in Tooling for ASP.NET Core Blazor.
+The -o|--output option creates a folder for the solution. If you've created a folder for the solution and the command shell is open in that folder, omit the -o|--output option and value to create the solution.
+In Visual Studio Code, open the app's project folder.
+Confirm that a hosted Blazor WebAssembly app was created: Confirm the presence of a Client project and a Server project in the app's solution folder. If the two projects aren't present, start over and confirm passing the -ho or --hosted option to the dotnet new command when creating the solution.
+To configure Visual Studio Code debugging assets, see:
+- Tooling for ASP.NET Core Blazor (use the guidance for the Linux / macOS operating system regardless of platform)
+- Debug ASP.NET Core Blazor apps
+In a command shell, execute the following command:
+
+CODE EXAMPLE
+LANGUAGE: dotnetcli
+```
+dotnet new blazorwasm -ho -o BlazorWebAssemblySignalRApp
+```
+The -ho|--hosted option creates a hosted Blazor WebAssembly solution.
+The -o|--output option creates a folder for the solution. If you've created a folder for the solution and the command shell is open in that folder, omit the -o|--output option and value to create the solution.
+Confirm that a hosted Blazor WebAssembly app was created: Confirm the presence of a Client project and a Server project in the app's solution folder. If the two projects aren't present, start over and confirm passing the -ho or --hosted option to the dotnet new command when creating the solution.
+
+### Add the SignalR client library
+- Visual Studio
+- Visual Studio Code
+- .NET CLI
+In Solution Explorer, right-click the BlazorWebAssemblySignalRApp.Client project and select Manage NuGet Packages.
+In the Manage NuGet Packages dialog, confirm that the Package source is set to nuget.org.
+With Browse selected, type Microsoft.AspNetCore.SignalR.Client in the search box.
+In the search results, select the Microsoft.AspNetCore.SignalR.Client package. Set the version to match the shared framework of the app. Select Install.
+If the Preview Changes dialog appears, select OK.
+If the License Acceptance dialog appears, select I Accept if you agree with the license terms.
+In the Terminal (Terminal > New Terminal from the menu bar opened to the BlazorWebAssemblySignalRApp.Client project using cd BlazorWebAssemblySignalRApp.Client), execute the following command:
+
+CODE EXAMPLE
+LANGUAGE: dotnetcli
+```
+dotnet add Client package Microsoft.AspNetCore.SignalR.Client
+```
+To add an earlier version of the package, supply the --version {VERSION} option, where the {VERSION} placeholder is the version of the package to add.
+In a command shell from the solution's folder, execute the following command:
+
+CODE EXAMPLE
+LANGUAGE: dotnetcli
+```
+dotnet add Client package Microsoft.AspNetCore.SignalR.Client
+```
+To add an earlier version of the package, supply the --version {VERSION} option, where the {VERSION} placeholder is the version of the package to add.
+
+### Add a SignalR hub
+In the BlazorWebAssemblySignalRApp.Server project, create a Hubs (plural) folder and add the following ChatHub class (Hubs/ChatHub.cs):
+
+CODE EXAMPLE
+LANGUAGE: csharp
+```
+using Microsoft.AspNetCore.SignalR;
+
+namespace BlazorWebAssemblySignalRApp.Server.Hubs;
+
+public class ChatHub : Hub
+{
+    public async Task SendMessage(string user, string message)
+    {
+        await Clients.All.SendAsync("ReceiveMessage", user, message);
+    }
+}
+```
+
+CODE EXAMPLE
+LANGUAGE: csharp
+```
+using Microsoft.AspNetCore.SignalR;
+
+namespace BlazorWebAssemblySignalRApp.Server.Hubs;
+
+public class ChatHub : Hub
+{
+    public async Task SendMessage(string user, string message)
+    {
+        await Clients.All.SendAsync("ReceiveMessage", user, message);
+    }
+}
+```
+
+CODE EXAMPLE
+LANGUAGE: csharp
+```
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.SignalR;
+
+namespace BlazorWebAssemblySignalRApp.Server.Hubs
+{
+    public class ChatHub : Hub
+    {
+        public async Task SendMessage(string user, string message)
+        {
+            await Clients.All.SendAsync("ReceiveMessage", user, message);
+        }
+    }
+}
+```
+
+CODE EXAMPLE
+LANGUAGE: csharp
+```
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.SignalR;
+
+namespace BlazorWebAssemblySignalRApp.Server.Hubs
+{
+    public class ChatHub : Hub
+    {
+        public async Task SendMessage(string user, string message)
+        {
+            await Clients.All.SendAsync("ReceiveMessage", user, message);
+        }
+    }
+}
+```
+
+### Add services and an endpoint for the SignalR hub
+In the BlazorWebAssemblySignalRApp.Server project, open the Program.cs file.
+Add the namespace for the ChatHub class to the top of the file:
+
+CODE EXAMPLE
+LANGUAGE: csharp
+```
+using BlazorWebAssemblySignalRApp.Server.Hubs;
+```
+Add SignalR and response compression middleware services:
+
+CODE EXAMPLE
+LANGUAGE: csharp
+```
+builder.Services.AddSignalR();
+builder.Services.AddResponseCompression(opts =>
+{
+      opts.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(
+         new[] { "application/octet-stream" });
+});
+```
+Use response compression middleware at the top of the processing pipeline's configuration immediately after the line that builds the app:
+
+CODE EXAMPLE
+LANGUAGE: csharp
+```
+app.UseResponseCompression();
+```
+Between the endpoints for controllers and the client-side fallback, add an endpoint for the hub. Immediately after the line app.MapControllers();, add the following line:
+
+CODE EXAMPLE
+LANGUAGE: csharp
+```
+app.MapHub<ChatHub>("/chathub");
+```
+In the BlazorWebAssemblySignalRApp.Server project, open the Startup.cs file.
+Add the namespace for the ChatHub class to the top of the file:
+
+CODE EXAMPLE
+LANGUAGE: csharp
+```
+using BlazorWebAssemblySignalRApp.Server.Hubs;
+```
+Add SignalR and response compression middleware services:
+
+CODE EXAMPLE
+LANGUAGE: csharp
+```
+services.AddSignalR();
+services.AddResponseCompression(opts =>
+{
+      opts.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(
+         new[] { "application/octet-stream" });
+});
+```
+Use response compression middleware at the top of the processing pipeline's configuration:
+
+CODE EXAMPLE
+LANGUAGE: csharp
+```
+app.UseResponseCompression();
+```
+Between the endpoints for controllers and the client-side fallback, add an endpoint for the hub immediately after the line endpoints.MapControllers();:
+
+CODE EXAMPLE
+LANGUAGE: csharp
+```
+endpoints.MapHub<ChatHub>("/chathub");
+```
+
+### Add Razor component code for chat
+In the BlazorWebAssemblySignalRApp.Client project, open the Pages/Index.razor file.
+Replace the markup with the following code:
+
+CODE EXAMPLE
+LANGUAGE: razor
+```
+@page "/"
+@using Microsoft.AspNetCore.SignalR.Client
+@inject NavigationManager Navigation
+@implements IAsyncDisposable
+
+<PageTitle>Index</PageTitle>
+
+<div class="form-group">
+    <label>
+        User:
+        <input @bind="userInput" />
+    </label>
+</div>
+<div class="form-group">
+    <label>
+        Message:
+        <input @bind="messageInput" size="50" />
+    </label>
+</div>
+<button @onclick="Send" disabled="@(!IsConnected)">Send</button>
+
+<hr>
+
+<ul id="messagesList">
+    @foreach (var message in messages)
+    {
+        <li>@message</li>
+    }
+</ul>
+
+@code {
+    private HubConnection? hubConnection;
+    private List<string> messages = new List<string>();
+    private string? userInput;
+    private string? messageInput;
+
+    protected override async Task OnInitializedAsync()
+    {
+        hubConnection = new HubConnectionBuilder()
+            .WithUrl(Navigation.ToAbsoluteUri("/chathub"))
+            .Build();
+
+        hubConnection.On<string, string>("ReceiveMessage", (user, message) =>
+        {
+            var encodedMsg = $"{user}: {message}";
+            messages.Add(encodedMsg);
+            StateHasChanged();
+        });
+
+        await hubConnection.StartAsync();
+    }
+
+    private async Task Send()
+    {
+        if (hubConnection is not null)
+            {
+                await hubConnection.SendAsync("SendMessage", userInput, messageInput);
+            }
+    }
+
+    public bool IsConnected =>
+        hubConnection?.State == HubConnectionState.Connected;
+
+    public async ValueTask DisposeAsync()
+    {
+        if (hubConnection is not null)
+        {
+            await hubConnection.DisposeAsync();
+        }
+    }
+}
+```
+
+CODE EXAMPLE
+LANGUAGE: razor
+```
+@page "/"
+@using Microsoft.AspNetCore.SignalR.Client
+@inject NavigationManager Navigation
+@implements IAsyncDisposable
+
+<PageTitle>Index</PageTitle>
+
+<div class="form-group">
+    <label>
+        User:
+        <input @bind="userInput" />
+    </label>
+</div>
+<div class="form-group">
+    <label>
+        Message:
+        <input @bind="messageInput" size="50" />
+    </label>
+</div>
+<button @onclick="Send" disabled="@(!IsConnected)">Send</button>
+
+<hr>
+
+<ul id="messagesList">
+    @foreach (var message in messages)
+    {
+        <li>@message</li>
+    }
+</ul>
+
+@code {
+    private HubConnection? hubConnection;
+    private List<string> messages = new List<string>();
+    private string? userInput;
+    private string? messageInput;
+
+    protected override async Task OnInitializedAsync()
+    {
+        hubConnection = new HubConnectionBuilder()
+            .WithUrl(Navigation.ToAbsoluteUri("/chathub"))
+            .Build();
+
+        hubConnection.On<string, string>("ReceiveMessage", (user, message) =>
+        {
+            var encodedMsg = $"{user}: {message}";
+            messages.Add(encodedMsg);
+            StateHasChanged();
+        });
+
+        await hubConnection.StartAsync();
+    }
+
+    private async Task Send()
+    {
+        if (hubConnection is not null)
+            {
+                await hubConnection.SendAsync("SendMessage", userInput, messageInput);
+            }
+    }
+
+    public bool IsConnected =>
+        hubConnection?.State == HubConnectionState.Connected;
+
+    public async ValueTask DisposeAsync()
+    {
+        if (hubConnection is not null)
+        {
+            await hubConnection.DisposeAsync();
+        }
+    }
+}
+```
+
+CODE EXAMPLE
+LANGUAGE: razor
+```
+@page "/"
+@using Microsoft.AspNetCore.SignalR.Client
+@inject NavigationManager NavigationManager
+@implements IAsyncDisposable
+
+<div class="form-group">
+    <label>
+        User:
+        <input @bind="userInput" />
+    </label>
+</div>
+<div class="form-group">
+    <label>
+        Message:
+        <input @bind="messageInput" size="50" />
+    </label>
+</div>
+<button @onclick="Send" disabled="@(!IsConnected)">Send</button>
+
+<hr>
+
+<ul id="messagesList">
+    @foreach (var message in messages)
+    {
+        <li>@message</li>
+    }
+</ul>
+
+@code {
+    private HubConnection hubConnection;
+    private List<string> messages = new List<string>();
+    private string userInput;
+    private string messageInput;
+
+    protected override async Task OnInitializedAsync()
+    {
+        hubConnection = new HubConnectionBuilder()
+            .WithUrl(NavigationManager.ToAbsoluteUri("/chathub"))
+            .Build();
+
+        hubConnection.On<string, string>("ReceiveMessage", (user, message) =>
+        {
+            var encodedMsg = $"{user}: {message}";
+            messages.Add(encodedMsg);
+            StateHasChanged();
+        });
+
+        await hubConnection.StartAsync();
+    }
+
+    async Task Send() =>
+        await hubConnection.SendAsync("SendMessage", userInput, messageInput);
+
+    public bool IsConnected =>
+        hubConnection.State == HubConnectionState.Connected;
+
+    public async ValueTask DisposeAsync()
+    {
+        if (hubConnection is not null)
+        {
+            await hubConnection.DisposeAsync();
+        }
+    }
+}
+```
+
+CODE EXAMPLE
+LANGUAGE: razor
+```
+@page "/"
+@using Microsoft.AspNetCore.SignalR.Client
+@inject NavigationManager NavigationManager
+@implements IDisposable
+
+<div class="form-group">
+    <label>
+        User:
+        <input @bind="userInput" />
+    </label>
+</div>
+<div class="form-group">
+    <label>
+        Message:
+        <input @bind="messageInput" size="50" />
+    </label>
+</div>
+<button @onclick="Send" disabled="@(!IsConnected)">Send</button>
+
+<hr>
+
+<ul id="messagesList">
+    @foreach (var message in messages)
+    {
+        <li>@message</li>
+    }
+</ul>
+
+@code {
+    private HubConnection hubConnection;
+    private List<string> messages = new List<string>();
+    private string userInput;
+    private string messageInput;
+
+    protected override async Task OnInitializedAsync()
+    {
+        hubConnection = new HubConnectionBuilder()
+            .WithUrl(NavigationManager.ToAbsoluteUri("/chathub"))
+            .Build();
+
+        hubConnection.On<string, string>("ReceiveMessage", (user, message) =>
+        {
+            var encodedMsg = $"{user}: {message}";
+            messages.Add(encodedMsg);
+            StateHasChanged();
+        });
+
+        await hubConnection.StartAsync();
+    }
+
+    async Task Send() =>
+        await hubConnection.SendAsync("SendMessage", userInput, messageInput);
+
+    public bool IsConnected =>
+        hubConnection.State == HubConnectionState.Connected;
+
+    public void Dispose()
+    {
+        _ = hubConnection?.DisposeAsync();
+    }
+}
+```
+Note
+Disable response compression middleware in the Development environment when using Hot Reload. For more information, see ASP.NET Core Blazor SignalR guidance.
+
+### Run the app
+Follow the guidance for your tooling:
+- Visual Studio
+- Visual Studio Code
+- .NET CLI
+In Solution Explorer, select the BlazorWebAssemblySignalRApp.Server project. Press F5 to run the app with debugging or Ctrl+F5 to run the app without debugging.
+Important
+When executing a hosted Blazor WebAssembly app, run the app from the solution's Server project.
+Google Chrome or Microsoft Edge must be the selected browser for a debugging session.
+If the app fails to start in the browser:
+- In the .NET console, confirm that the solution is running from the "Server" project.
+- Refresh the browser using the browser's reload button.
+For information on configuring VS Code assets in the .vscode folder, see the Linux operating system guidance in Tooling for ASP.NET Core Blazor.
+Press F5 to run the app with debugging or Ctrl+F5 to run the app without debugging.
+Important
+When executing a hosted Blazor WebAssembly app, run the app from the solution's Server project.
+Google Chrome or Microsoft Edge must be the selected browser for a debugging session.
+If the app fails to start in the browser:
+- In the .NET console, confirm that the solution is running from the "Server" project.
+- Refresh the browser using the browser's reload button.
+In a command shell from the solution's folder, execute the following command to change the directory to the Server project folder:
+
+CODE EXAMPLE
+LANGUAGE: dotnetcli
+```
+cd Server
+```
+Run the server project with the dotnet watch (or dotnet run) command:
+
+CODE EXAMPLE
+LANGUAGE: dotnetcli
+```
+dotnet watch
+```
+Important
+When executing a hosted Blazor WebAssembly app, run the app from the solution's Server project.
+If the app fails to start in the browser:
+- In the .NET console, confirm that the solution is running from the "Server" project.
+- Refresh the browser using the browser's reload button.
+Copy the URL from the address bar, open another browser instance or tab, and paste the URL in the address bar.
+Choose either browser, enter a name and message, and select the button to send the message. The name and message are displayed on both pages instantly:
+Quotes: Star Trek VI: The Undiscovered Country ©1991 Paramount
+
+## Next steps
+In this tutorial, you learned how to:
+- Create a Blazor app
+- Add the SignalR client library
+- Add a SignalR hub
+- Add SignalR services and an endpoint for the SignalR hub
+- Add a Razor component code for chat
+For detailed guidance on the SignalR and Blazor frameworks, see the following reference documentation sets:
+Overview of ASP.NET Core SignalR ASP.NET Core Blazor
+
+## Additional resources
+- Bearer token authentication with Identity Server, WebSockets, and Server-Sent Events
+- Secure a SignalR hub in Blazor WebAssembly apps
+- SignalR cross-origin negotiation for authentication
+- SignalR configuration
+- Debug ASP.NET Core Blazor apps
+- Blazor samples GitHub repository (dotnet/blazor-samples) (how to download)
+ASP.NET Core
+
+## Feedback
+Was this page helpful?
+Need help with this topic?
+Want to try using Ask Learn to clarify or guide you through this topic?
+
+## Additional resources
+- Last updated on 2025-11-12

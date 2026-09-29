@@ -1,0 +1,71 @@
+# Overview of ASP.NET Core | Microsoft Learn
+SOURCE: https://learn.microsoft.com/en-us/aspnet/core/overview
+Note
+Access to this page requires authorization. You can try signing in or changing directories.
+Access to this page requires authorization. You can try changing directories.
+
+# Overview of ASP.NET Core
+Note
+This isn't the latest version of this article. For the current release, see the .NET 10 version of this article.
+Warning
+This version of ASP.NET Core is no longer supported. For more information, see the .NET and .NET Core Support Policy. For the current release, see the .NET 10 version of this article.
+ASP.NET Core is a cross-platform, high-performance, open-source framework for building modern web apps using .NET. The framework is built for large-scale app development and can handle any size workload, making it a robust choice for enterprise-level apps.
+Key features:
+- Lightweight and modular HTTP request pipeline.
+- Kestrel: A high-performance and cross-platform HTTP server.
+- Integrated dependency injection.
+- Environment-based configuration.
+- Rich logging, tracing, and runtime metrics.
+- Blazor: Create rich interactive web UI components using C#—no JavaScript required.
+- Integrate seamlessly with popular client-side frameworks and libraries, including Angular, React, Vue, and Bootstrap.
+- Minimal APIs: Build fast web APIs with minimal code and configuration by fluently declaring API routes and endpoints.
+- SignalR: Add real-time web functionality.
+- gRPC: High performance Remote Procedure Call (RPC) services.
+- Security: Built-in security features for authentication, authorization, and data protection.
+- Testing: Easily create unit and integration tests.
+- Tooling: Maximize your development productivity with Visual Studio and Visual Studio Code.
+- Lightweight and modular HTTP request pipeline.
+- Kestrel: A high-performance and cross-platform HTTP server.
+- Integrated dependency injection.
+- Environment-based configuration.
+- Rich logging, tracing, and runtime metrics.
+- Blazor: Create rich interactive web UI components using C#—no JavaScript required.
+- Integrate seamlessly with popular client-side frameworks and libraries, including Angular, React, Vue, and Bootstrap.
+- SignalR: Add real-time web functionality.
+- gRPC: High performance Remote Procedure Call (RPC) services.
+- Security: Built-in security features for authentication, authorization, and data protection.
+- Testing: Easily create unit and integration tests.
+- Tooling: Maximize your development productivity with Visual Studio and Visual Studio Code.
+- Lightweight and modular HTTP request pipeline.
+- Kestrel: A high-performance and cross-platform HTTP server.
+- Integrated dependency injection.
+- Environment-based configuration.
+- Rich logging, tracing, and runtime metrics.
+- Develop apps and APIs using Razor Pages and Model-View-Controller (MVC) frameworks.
+- Integrate seamlessly with popular client-side frameworks and libraries, including Angular, React, Vue, and Bootstrap.
+- SignalR: Add real-time web functionality.
+- gRPC: High performance Remote Procedure Call (RPC) services.
+- Security: Built-in security features for authentication, authorization, and data protection.
+- Testing: Easily create unit and integration tests.
+- Tooling: Maximize your development productivity with Visual Studio and Visual Studio Code.
+
+## Why choose ASP.NET Core?
+- Unified framework: ASP.NET Core is a complete and fully integrated web framework with built-in production-ready components to handle all of your web development needs.
+- Full stack productivity: Build more apps faster by enabling your team to work full stack, from the frontend to the backend, using a single development framework.
+- Secure by design: ASP.NET Core is built with security as a top concern and includes built-in support for authentication, authorization, and data protection.
+- Cloud-ready: Whether you're deploying to your own data centers or to the cloud, ASP.NET Core simplifies deployment, monitoring, and configuration.
+- Performance & scalability: Handle the most demanding workloads with ASP.NET Core's industry leading performance.
+- Trusted and mature: ASP.NET Core is used and proven at hyperscale by some of the largest services in the world, including Bing, Xbox, Microsoft 365, and Azure.
+
+## Get started
+Are you ready to start your ASP.NET Core learning journey? It's time to build your first web app with ASP.NET Core!
+Get started with ASP.NET Core
+ASP.NET Core
+
+## Feedback
+Was this page helpful?
+Need help with this topic?
+Want to try using Ask Learn to clarify or guide you through this topic?
+
+## Additional resources
+- Last updated on 2025-07-30

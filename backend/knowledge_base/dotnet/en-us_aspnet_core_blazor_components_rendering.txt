@@ -1,0 +1,826 @@
+# ASP.NET Core Razor component rendering | Microsoft Learn
+SOURCE: https://learn.microsoft.com/en-us/aspnet/core/blazor/components/rendering
+Note
+Access to this page requires authorization. You can try signing in or changing directories.
+Access to this page requires authorization. You can try changing directories.
+
+# ASP.NET Core Razor component rendering
+Note
+This isn't the latest version of this article. For the current release, see the .NET 10 version of this article.
+Warning
+This version of ASP.NET Core is no longer supported. For more information, see the .NET and .NET Core Support Policy. For the current release, see the .NET 10 version of this article.
+This article explains Razor component rendering in ASP.NET Core Blazor apps, including when to call StateHasChanged to manually trigger a component to render.
+
+## Rendering conventions for ComponentBase
+Components must render when they're first added to the component hierarchy by a parent component. This is the only time that a component must render. Components may render at other times according to their own logic and conventions.
+Razor components inherit from the ComponentBase base class, which contains logic to trigger rerendering at the following times:
+- After applying an updated set of parameters from a parent component.
+- After applying an updated value for a cascading parameter.
+- After notification of an event and invoking one of its own event handlers.
+- After a call to its own StateHasChanged method (see ASP.NET Core Razor component lifecycle). For guidance on how to prevent overwriting child component parameters when StateHasChanged is called in a parent component, see Avoid overwriting parameters in ASP.NET Core Blazor.
+Components inherited from ComponentBase skip rerenders due to parameter updates if either of the following are true:
+All of the parameters are from a set of known types† or any primitive type that hasn't changed since the previous set of parameters were set.
+†The Blazor framework uses a set of built-in rules and explicit parameter type checks for change detection. These rules and the types are subject to change at any time. For more information, see the ChangeDetection API in the ASP.NET Core reference source.
+Note
+Documentation links to .NET reference source usually load the repository's default branch, which represents the current development for the next release of .NET. To select a tag for a specific release, use the Switch branches or tags dropdown list. For more information, see How to select a version tag of ASP.NET Core source code (dotnet/AspNetCore.Docs #26205).
+The override of the component's ShouldRender method returns false (the default ComponentBase implementation always returns true).
+
+## Control the rendering flow
+In most cases, ComponentBase conventions result in the correct subset of component rerenders after an event occurs. Developers aren't usually required to provide manual logic to tell the framework which components to rerender and when to rerender them. The overall effect of the framework's conventions is that the component receiving an event rerenders itself, which recursively triggers rerendering of descendant components whose parameter values may have changed.
+For more information on the performance implications of the framework's conventions and how to optimize an app's component hierarchy for rendering, see ASP.NET Core Blazor rendering performance best practices.
+
+## Streaming rendering
+Use streaming rendering with static server-side rendering (static SSR) or prerendering to stream content updates on the response stream and improve the user experience for components that perform long-running asynchronous tasks to fully render.
+For example, consider a component that makes a long-running database query or web API call to render data when the page loads. Normally, asynchronous tasks executed as part of rendering a server-side component must complete before the rendered response is sent, which can delay loading the page. Any significant delay in rendering the page harms the user experience. To improve the user experience, streaming rendering initially renders the entire page quickly with placeholder content while asynchronous operations execute. After the operations are complete, the updated content is sent to the client on the same response connection and patched into the DOM.
+Streaming rendering requires the server to avoid buffering the output. The response data must flow to the client as the data is generated. For hosts that enforce buffering, streaming rendering degrades gracefully, and the page loads without streaming rendering.
+To stream content updates when using static server-side rendering (static SSR) or prerendering, apply the [StreamRendering] attribute in .NET 9 or later (use [StreamRendering(true)] in .NET 8) to the component. Streaming rendering must be explicitly enabled because streamed updates may cause content on the page to shift. Components without the attribute automatically adopt streaming rendering if the parent component uses the feature. Pass false to the attribute in a child component to disable the feature at that point and further down the component subtree. The attribute is functional when applied to components supplied by a Razor class library.
+If enhanced navigation is active, streaming rendering renders Not Found responses without reloading the page. When enhanced navigation is blocked, the framework redirects to Not Found content with a page refresh.
+Streaming rendering can only render components that have a route, such as a NotFoundPage assignment (NotFoundPage="...") or a status code pages re-execution middleware page assignment (UseStatusCodePagesWithReExecute). The Not Found render fragment (<NotFound>...</NotFound>) and the DefaultNotFound 404 content ("Not found" plain text) don't have routes, so they can't be used during streaming rendering.
+Streaming NavigationManager.NotFound content rendering uses (in order):
+- A NotFoundPage passed to the Router component, if present.
+- A status code pages re-execution middleware page, if configured.
+- No action if neither of the preceding approaches is adopted.
+Non-streaming NavigationManager.NotFound content rendering uses (in order):
+- A NotFoundPage passed to the Router component, if present.
+- Not Found render fragment content, if present. Not recommended in .NET 10 or later.
+- DefaultNotFound 404 content ("Not found" plain text).
+Status code pages re-execution middleware with UseStatusCodePagesWithReExecute takes precedence for browser-based address routing problems, such as an incorrect URL typed into the browser's address bar or selecting a link that has no endpoint in the app.
+The following example is based on the Weather component in an app created from the Blazor Web App project template. The call to Task.Delay simulates retrieving weather data asynchronously. The component initially renders placeholder content ("Loading...") without waiting for the asynchronous delay to complete. When the asynchronous delay completes and the weather data content is generated, the content is streamed to the response and patched into the weather forecast table.
+Weather.razor:
+
+CODE EXAMPLE
+LANGUAGE: razor
+```
+@page "/weather"
+@attribute [StreamRendering]
+
+...
+
+@if (forecasts == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <table class="table">
+        ...
+        <tbody>
+            @foreach (var forecast in forecasts)
+            {
+                <tr>
+                    <td>@forecast.Date.ToShortDateString()</td>
+                    <td>@forecast.TemperatureC</td>
+                    <td>@forecast.TemperatureF</td>
+                    <td>@forecast.Summary</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    ...
+
+    private WeatherForecast[]? forecasts;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Task.Delay(500);
+
+        ...
+
+        forecasts = ...
+    }
+}
+```
+
+## Suppress UI refreshing (ShouldRender)
+ShouldRender is called each time a component is rendered. Override ShouldRender to manage UI refreshing. If the implementation returns true, the UI is refreshed.
+Even if ShouldRender is overridden, the component is always initially rendered.
+ControlRender.razor:
+
+CODE EXAMPLE
+LANGUAGE: razor
+```
+@page "/control-render"
+
+<PageTitle>Control Render</PageTitle>
+
+<h1>Control Render Example</h1>
+
+<label>
+    <input type="checkbox" @bind="shouldRender" />
+    Should Render?
+</label>
+
+<p>Current count: @currentCount</p>
+
+<p>
+    <button @onclick="IncrementCount">Click me</button>
+</p>
+
+@code {
+    private int currentCount = 0;
+    private bool shouldRender = true;
+
+    protected override bool ShouldRender() => shouldRender;
+
+    private void IncrementCount() => currentCount++;
+}
+```
+
+CODE EXAMPLE
+LANGUAGE: razor
+```
+@page "/control-render"
+
+<PageTitle>Control Render</PageTitle>
+
+<h1>Control Render Example</h1>
+
+<label>
+    <input type="checkbox" @bind="shouldRender" />
+    Should Render?
+</label>
+
+<p>Current count: @currentCount</p>
+
+<p>
+    <button @onclick="IncrementCount">Click me</button>
+</p>
+
+@code {
+    private int currentCount = 0;
+    private bool shouldRender = true;
+
+    protected override bool ShouldRender() => shouldRender;
+
+    private void IncrementCount() => currentCount++;
+}
+```
+
+CODE EXAMPLE
+LANGUAGE: razor
+```
+@page "/control-render"
+
+<label>
+    <input type="checkbox" @bind="shouldRender" />
+    Should Render?
+</label>
+
+<p>Current count: @currentCount</p>
+
+<p>
+    <button @onclick="IncrementCount">Click me</button>
+</p>
+
+@code {
+    private int currentCount = 0;
+    private bool shouldRender = true;
+
+    protected override bool ShouldRender()
+    {
+        return shouldRender;
+    }
+
+    private void IncrementCount()
+    {
+        currentCount++;
+    }
+}
+```
+
+CODE EXAMPLE
+LANGUAGE: razor
+```
+@page "/control-render"
+
+<label>
+    <input type="checkbox" @bind="shouldRender" />
+    Should Render?
+</label>
+
+<p>Current count: @currentCount</p>
+
+<p>
+    <button @onclick="IncrementCount">Click me</button>
+</p>
+
+@code {
+    private int currentCount = 0;
+    private bool shouldRender = true;
+
+    protected override bool ShouldRender()
+    {
+        return shouldRender;
+    }
+
+    private void IncrementCount()
+    {
+        currentCount++;
+    }
+}
+```
+
+CODE EXAMPLE
+LANGUAGE: razor
+```
+@page "/control-render"
+
+<label>
+    <input type="checkbox" @bind="shouldRender" />
+    Should Render?
+</label>
+
+<p>Current count: @currentCount</p>
+
+<p>
+    <button @onclick="IncrementCount">Click me</button>
+</p>
+
+@code {
+    private int currentCount = 0;
+    private bool shouldRender = true;
+
+    protected override bool ShouldRender()
+    {
+        return shouldRender;
+    }
+
+    private void IncrementCount()
+    {
+        currentCount++;
+    }
+}
+```
+
+CODE EXAMPLE
+LANGUAGE: razor
+```
+@page "/control-render"
+
+<label>
+    <input type="checkbox" @bind="shouldRender" />
+    Should Render?
+</label>
+
+<p>Current count: @currentCount</p>
+
+<p>
+    <button @onclick="IncrementCount">Click me</button>
+</p>
+
+@code {
+    private int currentCount = 0;
+    private bool shouldRender = true;
+
+    protected override bool ShouldRender()
+    {
+        return shouldRender;
+    }
+
+    private void IncrementCount()
+    {
+        currentCount++;
+    }
+}
+```
+For more information on performance best practices pertaining to ShouldRender, see ASP.NET Core Blazor rendering performance best practices.
+
+## StateHasChanged
+Calling StateHasChanged enqueues a rerender to occur when the app's main thread is free.
+Components are enqueued for rendering, and they aren't enqueued again if there's already a pending rerender. If a component calls StateHasChanged five times in a row in a loop, the component only renders once. This behavior is encoded in ComponentBase, which checks first if it has queued a rerender before enqueuing an additional one.
+A component can render multiple times during the same cycle, which commonly occurs when a component has children that interact with each other:
+- A parent component renders several children.
+- Child components render and trigger an update on the parent.
+- A parent component rerenders with new state.
+This design allows for StateHasChanged to be called when necessary without the risk of introducing unnecessary rendering. You can always take control of this behavior in individual components by implementing IComponent directly and manually handling when the component renders.
+Consider the following IncrementCount method that increments a count, calls StateHasChanged, and increments the count again:
+
+CODE EXAMPLE
+LANGUAGE: csharp
+```
+private void IncrementCount()
+{
+    currentCount++;
+    StateHasChanged();
+    currentCount++;
+}
+```
+Stepping through the code in the debugger, you might think that the count updates in the UI for the first currentCount++ execution immediately after StateHasChanged is called. However, the UI doesn't show an updated count at that point due to the synchronous processing taking place for this method's execution. There's no opportunity for the renderer to render the component until after the event handler is finished. The UI displays increases for both currentCount++ executions in a single render.
+If you await something between the currentCount++ lines, the awaited call gives the renderer a chance to render. This has led to some developers calling Delay with a one millisecond delay in their components to allow a render to occur, but we don't recommend arbitrarily slowing down an app to enqueue a render.
+The best approach is to await Task.Yield, which forces the component to process code asynchronously and render during the current batch with a second render in a separate batch after the yielded task runs the continuation.
+Consider the following revised IncrementCount method, which updates the UI twice because the render enqueued by StateHasChanged is performed when the task is yielded with the call to Task.Yield:
+
+CODE EXAMPLE
+LANGUAGE: csharp
+```
+private async Task IncrementCount()
+{
+    currentCount++;
+    StateHasChanged();
+    await Task.Yield();
+    currentCount++;
+}
+```
+Be careful not to call StateHasChanged unnecessarily, which is a common mistake that imposes unnecessary rendering costs. Code shouldn't need to call StateHasChanged when:
+- Routinely handling events, whether synchronously or asynchronously, since ComponentBase triggers a render for most routine event handlers.
+- Implementing typical lifecycle logic, such as OnInitialized or OnParametersSetAsync, whether synchronously or asynchronously, since ComponentBase triggers a render for typical lifecycle events.
+However, it might make sense to call StateHasChanged in the cases described in the following sections of this article:
+- An asynchronous handler involves multiple asynchronous phases
+- Receiving a call from something external to the Blazor rendering and event handling system
+- To render component outside the subtree that is rerendered by a particular event
+
+### An asynchronous handler involves multiple asynchronous phases
+Due to the way that tasks are defined in .NET, a receiver of a Task can only observe its final completion, not intermediate asynchronous states. Therefore, ComponentBase can only trigger rerendering when the Task is first returned and when the Task finally completes. The framework can't know to rerender a component at other intermediate points, such as when an IAsyncEnumerable<T> returns data in a series of intermediate Tasks. If you want to rerender at intermediate points, call StateHasChanged at those points.
+Consider the following CounterState1 component, which updates the count four times each time the IncrementCount method executes:
+- Automatic renders occur after the first and last increments of currentCount.
+- Manual renders are triggered by calls to StateHasChanged when the framework doesn't automatically trigger rerenders at intermediate processing points where currentCount is incremented.
+CounterState1.razor:
+
+CODE EXAMPLE
+LANGUAGE: razor
+```
+@page "/counter-state-1"
+
+<PageTitle>Counter State 1</PageTitle>
+
+<h1>Counter State Example 1</h1>
+
+<p>
+    Current count: @currentCount
+</p>
+
+<p>
+    <button class="btn btn-primary" @onclick="IncrementCount">Click me</button>
+</p>
+
+@code {
+    private int currentCount = 0;
+
+    private async Task IncrementCount()
+    {
+        currentCount++;
+        // Renders here automatically
+
+        await Task.Delay(1000);
+        currentCount++;
+        StateHasChanged();
+
+        await Task.Delay(1000);
+        currentCount++;
+        StateHasChanged();
+
+        await Task.Delay(1000);
+        currentCount++;
+        // Renders here automatically
+    }
+}
+```
+
+CODE EXAMPLE
+LANGUAGE: razor
+```
+@page "/counter-state-1"
+
+<PageTitle>Counter State 1</PageTitle>
+
+<h1>Counter State Example 1</h1>
+
+<p>
+    Current count: @currentCount
+</p>
+
+<p>
+    <button class="btn btn-primary" @onclick="IncrementCount">Click me</button>
+</p>
+
+@code {
+    private int currentCount = 0;
+
+    private async Task IncrementCount()
+    {
+        currentCount++;
+        // Renders here automatically
+
+        await Task.Delay(1000);
+        currentCount++;
+        StateHasChanged();
+
+        await Task.Delay(1000);
+        currentCount++;
+        StateHasChanged();
+
+        await Task.Delay(1000);
+        currentCount++;
+        // Renders here automatically
+    }
+}
+```
+
+CODE EXAMPLE
+LANGUAGE: razor
+```
+@page "/counter-state-1"
+
+<p>
+    Current count: @currentCount
+</p>
+
+<p>
+    <button class="btn btn-primary" @onclick="IncrementCount">Click me</button>
+</p>
+
+@code {
+    private int currentCount = 0;
+
+    private async Task IncrementCount()
+    {
+        currentCount++;
+        // Renders here automatically
+
+        await Task.Delay(1000);
+        currentCount++;
+        StateHasChanged();
+
+        await Task.Delay(1000);
+        currentCount++;
+        StateHasChanged();
+
+        await Task.Delay(1000);
+        currentCount++;
+        // Renders here automatically
+    }
+}
+```
+
+CODE EXAMPLE
+LANGUAGE: razor
+```
+@page "/counter-state-1"
+
+<p>
+    Current count: @currentCount
+</p>
+
+<p>
+    <button class="btn btn-primary" @onclick="IncrementCount">Click me</button>
+</p>
+
+@code {
+    private int currentCount = 0;
+
+    private async Task IncrementCount()
+    {
+        currentCount++;
+        // Renders here automatically
+
+        await Task.Delay(1000);
+        currentCount++;
+        StateHasChanged();
+
+        await Task.Delay(1000);
+        currentCount++;
+        StateHasChanged();
+
+        await Task.Delay(1000);
+        currentCount++;
+        // Renders here automatically
+    }
+}
+```
+
+CODE EXAMPLE
+LANGUAGE: razor
+```
+@page "/counter-state-1"
+
+<p>
+    Current count: @currentCount
+</p>
+
+<p>
+    <button class="btn btn-primary" @onclick="IncrementCount">Click me</button>
+</p>
+
+@code {
+    private int currentCount = 0;
+
+    private async Task IncrementCount()
+    {
+        currentCount++;
+        // Renders here automatically
+
+        await Task.Delay(1000);
+        currentCount++;
+        StateHasChanged();
+
+        await Task.Delay(1000);
+        currentCount++;
+        StateHasChanged();
+
+        await Task.Delay(1000);
+        currentCount++;
+        // Renders here automatically
+    }
+}
+```
+
+CODE EXAMPLE
+LANGUAGE: razor
+```
+@page "/counter-state-1"
+
+<p>
+    Current count: @currentCount
+</p>
+
+<p>
+    <button class="btn btn-primary" @onclick="IncrementCount">Click me</button>
+</p>
+
+@code {
+    private int currentCount = 0;
+
+    private async Task IncrementCount()
+    {
+        currentCount++;
+        // Renders here automatically
+
+        await Task.Delay(1000);
+        currentCount++;
+        StateHasChanged();
+
+        await Task.Delay(1000);
+        currentCount++;
+        StateHasChanged();
+
+        await Task.Delay(1000);
+        currentCount++;
+        // Renders here automatically
+    }
+}
+```
+
+### Receiving a call from something external to the Blazor rendering and event handling system
+ComponentBase only knows about its own lifecycle methods and Blazor-triggered events. ComponentBase doesn't know about other events that may occur in code. For example, any C# events raised by a custom data store are unknown to Blazor. In order for such events to trigger rerendering to display updated values in the UI, call StateHasChanged.
+Consider the following CounterState2 component that uses System.Timers.Timer to update a count at a regular interval and calls StateHasChanged to update the UI:
+- OnTimerCallback runs outside of any Blazor-managed rendering flow or event notification. Therefore, OnTimerCallback must call StateHasChanged because Blazor isn't aware of the changes to currentCount in the callback.
+- The component implements IDisposable, where the Timer is disposed when the framework calls the Dispose method. For more information, see ASP.NET Core Razor component disposal.
+Because the callback is invoked outside of Blazor's synchronization context, the component must wrap the logic of OnTimerCallback in ComponentBase.InvokeAsync to move it onto the renderer's synchronization context. This is equivalent to marshalling to the UI thread in other UI frameworks. StateHasChanged can only be called from the renderer's synchronization context and throws an exception otherwise:
+System.InvalidOperationException: 'The current thread is not associated with the Dispatcher. Use InvokeAsync() to switch execution to the Dispatcher when triggering rendering or component state.'
+CounterState2.razor:
+
+CODE EXAMPLE
+LANGUAGE: razor
+```
+@page "/counter-state-2"
+@using System.Timers
+@implements IDisposable
+
+<PageTitle>Counter State 2</PageTitle>
+
+<h1>Counter State Example 2</h1>
+
+<p>
+    This counter demonstrates <code>Timer</code> disposal.
+</p>
+
+<p>
+    Current count: @currentCount
+</p>
+
+@code {
+    private int currentCount = 0;
+    private Timer timer = new(1000);
+
+    protected override void OnInitialized()
+    {
+        timer.Elapsed += (sender, eventArgs) => OnTimerCallback();
+        timer.Start();
+    }
+
+    private void OnTimerCallback()
+    {
+        _ = InvokeAsync(() =>
+        {
+            currentCount++;
+            StateHasChanged();
+        });
+    }
+
+    public void Dispose() => timer.Dispose();
+}
+```
+
+CODE EXAMPLE
+LANGUAGE: razor
+```
+@page "/counter-state-2"
+@using System.Timers
+@implements IDisposable
+
+<PageTitle>Counter State 2</PageTitle>
+
+<h1>Counter State Example 2</h1>
+
+<p>
+    This counter demonstrates <code>Timer</code> disposal.
+</p>
+
+<p>
+    Current count: @currentCount
+</p>
+
+@code {
+    private int currentCount = 0;
+    private Timer timer = new(1000);
+
+    protected override void OnInitialized()
+    {
+        timer.Elapsed += (sender, eventArgs) => OnTimerCallback();
+        timer.Start();
+    }
+
+    private void OnTimerCallback()
+    {
+        _ = InvokeAsync(() =>
+        {
+            currentCount++;
+            StateHasChanged();
+        });
+    }
+
+    public void Dispose() => timer.Dispose();
+}
+```
+
+CODE EXAMPLE
+LANGUAGE: razor
+```
+@page "/counter-state-2"
+@using System.Timers
+@implements IDisposable
+
+<h1>Counter with <code>Timer</code> disposal</h1>
+
+<p>
+    Current count: @currentCount
+</p>
+
+@code {
+    private int currentCount = 0;
+    private Timer timer = new(1000);
+
+    protected override void OnInitialized()
+    {
+        timer.Elapsed += (sender, eventArgs) => OnTimerCallback();
+        timer.Start();
+    }
+
+    private void OnTimerCallback()
+    {
+        _ = InvokeAsync(() =>
+        {
+            currentCount++;
+            StateHasChanged();
+        });
+    }
+
+    public void Dispose() => timer.Dispose();
+}
+```
+
+CODE EXAMPLE
+LANGUAGE: razor
+```
+@page "/counter-state-2"
+@using System.Timers
+@implements IDisposable
+
+<h1>Counter with <code>Timer</code> disposal</h1>
+
+<p>
+    Current count: @currentCount
+</p>
+
+@code {
+    private int currentCount = 0;
+    private Timer timer = new(1000);
+
+    protected override void OnInitialized()
+    {
+        timer.Elapsed += (sender, eventArgs) => OnTimerCallback();
+        timer.Start();
+    }
+
+    private void OnTimerCallback()
+    {
+        _ = InvokeAsync(() =>
+        {
+            currentCount++;
+            StateHasChanged();
+        });
+    }
+
+    public void Dispose() => timer.Dispose();
+}
+```
+
+CODE EXAMPLE
+LANGUAGE: razor
+```
+@page "/counter-state-2"
+@using System.Timers
+@implements IDisposable
+
+<h1>Counter with <code>Timer</code> disposal</h1>
+
+<p>
+    Current count: @currentCount
+</p>
+
+@code {
+    private int currentCount = 0;
+    private Timer timer = new(1000);
+
+    protected override void OnInitialized()
+    {
+        timer.Elapsed += (sender, eventArgs) => OnTimerCallback();
+        timer.Start();
+    }
+
+    private void OnTimerCallback()
+    {
+        _ = InvokeAsync(() =>
+        {
+            currentCount++;
+            StateHasChanged();
+        });
+    }
+
+    public void Dispose() => timer.Dispose();
+}
+```
+
+CODE EXAMPLE
+LANGUAGE: razor
+```
+@page "/counter-state-2"
+@using System.Timers
+@implements IDisposable
+
+<h1>Counter with <code>Timer</code> disposal</h1>
+
+<p>
+    Current count: @currentCount
+</p>
+
+@code {
+    private int currentCount = 0;
+    private Timer timer = new Timer(1000);
+
+    protected override void OnInitialized()
+    {
+        timer.Elapsed += (sender, eventArgs) => OnTimerCallback();
+        timer.Start();
+    }
+
+    private void OnTimerCallback()
+    {
+        _ = InvokeAsync(() =>
+        {
+            currentCount++;
+            StateHasChanged();
+        });
+    }
+
+    public void Dispose() => timer.Dispose();
+}
+```
+
+### To render a component outside the subtree that's rerendered by a particular event
+The UI might involve:
+- Dispatching an event to one component.
+- Changing some state.
+- Rerendering a completely different component that isn't a descendant of the component receiving the event.
+One way to deal with this scenario is to provide a state management class, often as a dependency injection (DI) service, injected into multiple components. When one component calls a method on the state manager, the state manager raises a C# event that's then received by an independent component.
+For approaches to manage state, see the following resources:
+- Bind across more than two components using data bindings.
+- Pass data across a component hierarchy using cascading values and parameters.
+- In-memory state container service section of the State management overview.
+For the state manager approach, C# events are outside the Blazor rendering pipeline. Call StateHasChanged on other components you wish to rerender in response to the state manager's events.
+The state manager approach is similar to the earlier case with System.Timers.Timer in the previous section. Since the execution call stack typically remains on the renderer's synchronization context, calling InvokeAsync isn't normally required. Calling InvokeAsync is only required if the logic escapes the synchronization context, such as calling ContinueWith on a Task or awaiting a Task with ConfigureAwait(false). For more information, see the Receiving a call from something external to the Blazor rendering and event handling system section.
+
+## WebAssembly loading progress indicator for Blazor Web Apps
+An app can adopt custom code to create a loading progress indicator. For more information, see ASP.NET Core Blazor startup.
+ASP.NET Core
+
+## Feedback
+Was this page helpful?
+Need help with this topic?
+Want to try using Ask Learn to clarify or guide you through this topic?
+
+## Additional resources
+- Last updated on 2025-12-12

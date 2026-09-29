@@ -1,0 +1,5 @@
+# Contributing — Flask Documentation (3.1.x)
+SOURCE: https://flask.palletsprojects.com/en/stable/contributing/
+
+# Contributing
+See the Pallets detailed contributing documentation for many ways to contribute, including reporting issues, requesting features, asking or answering questions, and making PRs.

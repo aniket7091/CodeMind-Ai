@@ -1,0 +1,83 @@
+# Circular dependency | NestJS - A progressive Node.js framework
+SOURCE: https://docs.nestjs.com/fundamentals/circular-dependency
+
+### Circular dependency
+A circular dependency occurs when two classes depend on each other. For example, class A needs class B, and class B also needs class A. Circular dependencies can arise in Nest between modules and between providers.
+Avoid circular dependencies where possible, but you can't always do so. In such cases, Nest lets you resolve circular dependencies between providers in two ways: with forward referencing, or by using the ModuleRef class to retrieve a provider instance from the DI container. This chapter describes both techniques, as well as how to resolve circular dependencies between modules.
+
+#### Forward reference#
+A forward reference, created with the forwardRef() utility function, lets Nest reference classes that aren't defined yet. For example, if CatsService and CommonService depend on each other, both sides of the relationship can use @Inject() and the forwardRef() utility to resolve the circular dependency. Otherwise, Nest won't instantiate them, because not all of the essential metadata will be available. Here's an example:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+@Injectable()
+export class CatsService {
+  constructor(
+    @Inject(forwardRef(() => CommonService))
+    private commonService: CommonService,
+  ) {}
+}
+```
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+@Injectable()
+@Dependencies(forwardRef(() => CommonService))
+export class CatsService {
+  constructor(commonService) {
+    this.commonService = commonService;
+  }
+}
+```
+That covers one side of the relationship. Now do the same with CommonService:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+@Injectable()
+export class CommonService {
+  constructor(
+    @Inject(forwardRef(() => CatsService))
+    private catsService: CatsService,
+  ) {}
+}
+```
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+@Injectable()
+@Dependencies(forwardRef(() => CatsService))
+export class CommonService {
+  constructor(catsService) {
+    this.catsService = catsService;
+  }
+}
+```
+
+#### ModuleRef class alternative#
+An alternative to forwardRef() is to refactor your code and use the ModuleRef class to retrieve a provider on one side of the (otherwise) circular relationship. Learn more about the ModuleRef utility class in the module reference chapter.
+
+#### Module forward reference#
+To resolve circular dependencies between modules, use the same forwardRef() utility function on both sides of the module association. For example:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+@Module({
+  imports: [forwardRef(() => CatsModule)],
+})
+export class CommonModule {}
+```
+That covers one side of the relationship. Now do the same with CatsModule:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+@Module({
+  imports: [forwardRef(() => CommonModule)],
+})
+export class CatsModule {}
+```

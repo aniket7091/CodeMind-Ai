@@ -1,0 +1,608 @@
+# Active Support Instrumentation — Ruby on Rails Guides
+SOURCE: https://guides.rubyonrails.org/active_support_instrumentation.html
+
+# Active Support Instrumentation
+Active Support is a part of core Rails that provides Ruby language extensions, utilities, and other things. One of the things it includes is an instrumentation API that can be used inside an application to measure certain actions that occur within Ruby code, such as those inside a Rails application or the framework itself. It is not limited to Rails, however. It can be used independently in other Ruby scripts if desired.
+In this guide, you will learn how to use the Active Support's instrumentation API to measure events inside of Rails and other Ruby code.
+After reading this guide, you will know:
+- What instrumentation can provide.
+- How to add a subscriber to a hook.
+- The hooks inside the Rails framework for instrumentation.
+- How to build a custom instrumentation implementation.
+
+## 1. Introduction to Instrumentation
+The instrumentation API provided by Active Support allows developers to provide hooks which other developers may hook into. There are several of these within the Rails framework. With this API, developers can choose to be notified when certain events occur inside their application or another piece of Ruby code.
+For example, there is a hook provided within Active Record that is called every time Active Record uses an SQL query on a database. This hook could be subscribed to, and used to track the number of queries during a certain action. There's another hook around the processing of an action of a controller. This could be used, for instance, to track how long a specific action has taken.
+You are even able to create your own events inside your application which you can later subscribe to.
+
+## 2. Subscribing to an Event
+Use ActiveSupport::Notifications.subscribe with a block to listen to any notification. Depending on the amount of arguments the block takes, you will receive different data.
+The first way to subscribe to an event is to use a block with a single argument. The argument will be an instance of ActiveSupport::Notifications::Event.
+
+CODE EXAMPLE
+```
+ActiveSupport::Notifications.subscribe "process_action.action_controller" do |event|
+  event.name        # => "process_action.action_controller"
+  event.duration    # => 10 (in milliseconds)
+  event.allocations # => 1826
+  event.payload     # => {:extra=>information}
+
+  Rails.logger.info "#{event} Received!"
+end
+```
+If you don't need all the data recorded by an Event object, you can also specify a block that takes the following five arguments:
+- Name of the event
+- Time when it started
+- Time when it finished
+- A unique ID for the instrumenter that fired the event
+- The payload for the event
+
+CODE EXAMPLE
+```
+ActiveSupport::Notifications.subscribe "process_action.action_controller" do |name, started, finished, unique_id, payload|
+  # your own custom stuff
+  Rails.logger.info "#{name} Received! (started: #{started}, finished: #{finished})" # process_action.action_controller Received! (started: 2019-05-05 13:43:57 -0800, finished: 2019-05-05 13:43:58 -0800)
+end
+```
+If you are concerned about the accuracy of started and finished to compute a precise elapsed time, then use ActiveSupport::Notifications.monotonic_subscribe. The given block would receive the same arguments as above, but the started and finished will have values with an accurate monotonic time instead of wall-clock time.
+
+CODE EXAMPLE
+```
+ActiveSupport::Notifications.monotonic_subscribe "process_action.action_controller" do |name, started, finished, unique_id, payload|
+  # your own custom stuff
+  duration = finished - started # 1560979.429234 - 1560978.425334
+  Rails.logger.info "#{name} Received! (duration: #{duration})" # process_action.action_controller Received! (duration: 1.0039)
+end
+```
+You may also subscribe to events matching a regular expression. This enables you to subscribe to multiple events at once. Here's how to subscribe to everything from ActionController:
+
+CODE EXAMPLE
+```
+ActiveSupport::Notifications.subscribe(/action_controller/) do |event|
+  # inspect all ActionController events
+end
+```
+
+## 3. Rails Framework Hooks
+Within the Ruby on Rails framework, there are a number of hooks provided for common events. These events and their payloads are detailed below.
+
+### 3.1. Action Cable
+
+#### 3.1.1. perform_action.action_cable
+
+#### 3.1.2. transmit.action_cable
+
+#### 3.1.3. transmit_subscription_confirmation.action_cable
+
+#### 3.1.4. transmit_subscription_rejection.action_cable
+
+#### 3.1.5. broadcast.action_cable
+
+### 3.2. Action Controller
+
+#### 3.2.1. start_processing.action_controller
+
+CODE EXAMPLE
+```
+{
+  controller: "PostsController",
+  action: "new",
+  params: { "action" => "new", "controller" => "posts" },
+  headers: #<ActionDispatch::Http::Headers:0x0055a67a519b88>,
+  format: :html,
+  method: "GET",
+  path: "/posts/new"
+}
+```
+
+#### 3.2.2. process_action.action_controller
+
+CODE EXAMPLE
+```
+{
+  controller: "PostsController",
+  action: "index",
+  params: {"action" => "index", "controller" => "posts"},
+  headers: #<ActionDispatch::Http::Headers:0x0055a67a519b88>,
+  format: :html,
+  method: "GET",
+  path: "/posts",
+  request: #<ActionDispatch::Request:0x00007ff1cb9bd7b8>,
+  response: #<ActionDispatch::Response:0x00007f8521841ec8>,
+  status: 200,
+  view_runtime: 46.848,
+  db_runtime: 0.157
+}
+```
+
+#### 3.2.3. send_file.action_controller
+Additional keys may be added by the caller.
+
+#### 3.2.4. send_data.action_controller
+ActionController does not add any specific information to the payload. All options are passed through to the payload.
+
+#### 3.2.5. redirect_to.action_controller
+
+CODE EXAMPLE
+```
+{
+  status: 302,
+  location: "http://localhost:3000/posts/new",
+  request: <ActionDispatch::Request:0x00007ff1cb9bd7b8>
+}
+```
+
+#### 3.2.6. halted_callback.action_controller
+
+CODE EXAMPLE
+```
+{
+  filter: ":halting_filter"
+}
+```
+
+#### 3.2.7. unpermitted_parameters.action_controller
+
+#### 3.2.8. send_stream.action_controller
+
+CODE EXAMPLE
+```
+{
+  filename: "subscribers.csv",
+  type: "text/csv",
+  disposition: "attachment"
+}
+```
+
+#### 3.2.9. rate_limit.action_controller
+
+### 3.3. Action Controller: Caching
+
+#### 3.3.1. write_fragment.action_controller
+
+CODE EXAMPLE
+```
+{
+  key: 'posts/1-dashboard-view'
+}
+```
+
+#### 3.3.2. read_fragment.action_controller
+
+CODE EXAMPLE
+```
+{
+  key: 'posts/1-dashboard-view'
+}
+```
+
+#### 3.3.3. expire_fragment.action_controller
+
+CODE EXAMPLE
+```
+{
+  key: 'posts/1-dashboard-view'
+}
+```
+
+#### 3.3.4. exist_fragment?.action_controller
+
+CODE EXAMPLE
+```
+{
+  key: 'posts/1-dashboard-view'
+}
+```
+
+### 3.4. Action Dispatch
+
+#### 3.4.1. process_middleware.action_dispatch
+
+#### 3.4.2. redirect.action_dispatch
+
+#### 3.4.3. request.action_dispatch
+
+### 3.5. Action Mailbox
+
+#### 3.5.1. process.action_mailbox
+
+CODE EXAMPLE
+```
+{
+  mailbox: #<RepliesMailbox:0x00007f9f7a8388>,
+  inbound_email: {
+    id: 1,
+    message_id: "0CB459E0-0336-41DA-BC88-E6E28C697DDB@37signals.com",
+    status: "processing"
+  }
+}
+```
+
+### 3.6. Action Mailer
+
+#### 3.6.1. deliver.action_mailer
+
+CODE EXAMPLE
+```
+{
+  mailer: "Notification",
+  message_id: "4f5b5491f1774_181b23fc3d4434d38138e5@mba.local.mail",
+  subject: "Rails Guides",
+  to: ["users@rails.com", "dhh@rails.com"],
+  from: ["me@rails.com"],
+  date: Sat, 10 Mar 2012 14:18:09 +0100,
+  mail: "...", # omitted for brevity
+  perform_deliveries: true
+}
+```
+
+#### 3.6.2. process.action_mailer
+
+CODE EXAMPLE
+```
+{
+  mailer: "Notification",
+  action: "welcome_email",
+  args: []
+}
+```
+
+### 3.7. Action View
+
+#### 3.7.1. render_template.action_view
+
+CODE EXAMPLE
+```
+{
+  identifier: "/Users/adam/projects/notifications/app/views/posts/index.html.erb",
+  layout: "layouts/application",
+  locals: { foo: "bar" }
+}
+```
+
+#### 3.7.2. render_partial.action_view
+
+CODE EXAMPLE
+```
+{
+  identifier: "/Users/adam/projects/notifications/app/views/posts/_form.html.erb",
+  locals: { foo: "bar" }
+}
+```
+
+#### 3.7.3. render_collection.action_view
+The :cache_hits key is only included if the collection is rendered with cached: true.
+
+CODE EXAMPLE
+```
+{
+  identifier: "/Users/adam/projects/notifications/app/views/posts/_post.html.erb",
+  count: 3,
+  cache_hits: 0
+}
+```
+
+#### 3.7.4. render_layout.action_view
+
+CODE EXAMPLE
+```
+{
+  identifier: "/Users/adam/projects/notifications/app/views/layouts/application.html.erb"
+}
+```
+
+### 3.8. Active Job
+
+#### 3.8.1. enqueue_at.active_job
+
+#### 3.8.2. enqueue.active_job
+
+#### 3.8.3. enqueue_retry.active_job
+
+#### 3.8.4. enqueue_all.active_job
+
+#### 3.8.5. perform_start.active_job
+
+#### 3.8.6. perform.active_job
+
+#### 3.8.7. retry_stopped.active_job
+
+#### 3.8.8. discard.active_job
+Jobs using [Continuation][] also emit the following events.
+
+#### 3.8.9. interrupt.active_job
+
+#### 3.8.10. resume.active_job
+
+#### 3.8.11. step.active_job
+
+#### 3.8.12. step_skipped.active_job
+
+#### 3.8.13. step_started.active_job
+
+### 3.9. Active Record
+
+#### 3.9.1. sql.active_record
+Adapters may add their own data as well.
+
+CODE EXAMPLE
+```
+{
+  sql: "SELECT \"posts\".* FROM \"posts\" ",
+  name: "Post Load",
+  binds: [<ActiveModel::Attribute::WithCastValue:0x00007fe19d15dc00>],
+  type_casted_binds: [11],
+  async: false,
+  allow_retry: true,
+  connection: <ActiveRecord::ConnectionAdapters::SQLite3Adapter:0x00007f9f7a838850>,
+  transaction: <ActiveRecord::ConnectionAdapters::RealTransaction:0x0000000121b5d3e0>
+  affected_rows: 0
+  row_count: 5,
+  statement_name: nil,
+}
+```
+If the query is not executed in the context of a transaction, :transaction is nil.
+
+#### 3.9.2. strict_loading_violation.active_record
+This event is only emitted when config.active_record.action_on_strict_loading_violation is set to :log.
+
+#### 3.9.3. instantiation.active_record
+
+CODE EXAMPLE
+```
+{
+  record_count: 1,
+  class_name: "User"
+}
+```
+
+#### 3.9.4. start_transaction.active_record
+This event is emitted when a transaction has been started.
+Please, note that Active Record does not create the actual database transaction until needed:
+
+CODE EXAMPLE
+```
+ActiveRecord::Base.transaction do
+  # We are inside the block, but no event has been triggered yet.
+
+  # The following line makes Active Record start the transaction.
+  User.count # Event fired here.
+end
+```
+Remember that ordinary nested calls do not create new transactions:
+
+CODE EXAMPLE
+```
+ActiveRecord::Base.transaction do |t1|
+  User.count # Fires an event for t1.
+  ActiveRecord::Base.transaction do |t2|
+    # The next line fires no event for t2, because the only
+    # real database transaction in this example is t1.
+    User.first.touch
+  end
+end
+```
+However, if requires_new: true is passed, you get an event for the nested transaction too. This might be a savepoint under the hood:
+
+CODE EXAMPLE
+```
+ActiveRecord::Base.transaction do |t1|
+  User.count # Fires an event for t1.
+  ActiveRecord::Base.transaction(requires_new: true) do |t2|
+    User.first.touch # Fires an event for t2.
+  end
+end
+```
+
+#### 3.9.5. transaction.active_record
+This event is emitted when a database transaction finishes. The state of the transaction can be found in the :outcome key.
+In practice, you cannot do much with the transaction object, but it may still be helpful for tracing database activity. For example, by tracking transaction.uuid.
+
+#### 3.9.6. deprecated_association.active_record
+This event is emitted when a deprecated association is accessed, and the configured deprecated associations mode is :notify.
+The :location is a Thread::Backtrace::Location object, and :backtrace, if present, is an array of Thread::Backtrace::Location objects. These are computed using the Active Record backtrace cleaner. In Rails applications, this is the same as Rails.backtrace_cleaner.
+
+### 3.10. Active Storage
+
+#### 3.10.1. preview.active_storage
+
+#### 3.10.2. transform.active_storage
+
+#### 3.10.3. analyze.active_storage
+
+### 3.11. Active Storage: Storage Service
+
+#### 3.11.1. service_upload.active_storage
+
+#### 3.11.2. service_streaming_download.active_storage
+
+#### 3.11.3. service_download_chunk.active_storage
+
+#### 3.11.4. service_download.active_storage
+
+#### 3.11.5. service_delete.active_storage
+
+#### 3.11.6. service_delete_prefixed.active_storage
+
+#### 3.11.7. service_exist.active_storage
+
+#### 3.11.8. service_url.active_storage
+
+#### 3.11.9. service_update_metadata.active_storage
+This event is only emitted when using the Google Cloud Storage service.
+
+### 3.12. Active Support: Caching
+
+#### 3.12.1. cache_read.active_support
+
+#### 3.12.2. cache_read_multi.active_support
+
+#### 3.12.3. cache_generate.active_support
+This event is only emitted when fetch is called with a block.
+Options passed to fetch will be merged with the payload when writing to the store.
+
+CODE EXAMPLE
+```
+{
+  key: "name-of-complicated-computation",
+  store: "ActiveSupport::Cache::MemCacheStore"
+}
+```
+
+#### 3.12.4. cache_fetch_hit.active_support
+This event is only emitted when fetch is called with a block.
+Options passed to fetch will be merged with the payload.
+
+CODE EXAMPLE
+```
+{
+  key: "name-of-complicated-computation",
+  store: "ActiveSupport::Cache::MemCacheStore"
+}
+```
+
+#### 3.12.5. cache_write.active_support
+Cache stores may add their own data as well.
+
+CODE EXAMPLE
+```
+{
+  key: "name-of-complicated-computation",
+  store: "ActiveSupport::Cache::MemCacheStore"
+}
+```
+
+#### 3.12.6. cache_write_multi.active_support
+
+#### 3.12.7. cache_increment.active_support
+
+CODE EXAMPLE
+```
+{
+  key: "bottles-of-beer",
+  store: "ActiveSupport::Cache::RedisCacheStore",
+  amount: 99
+}
+```
+
+#### 3.12.8. cache_decrement.active_support
+
+CODE EXAMPLE
+```
+{
+  key: "bottles-of-beer",
+  store: "ActiveSupport::Cache::RedisCacheStore",
+  amount: 1
+}
+```
+
+#### 3.12.9. cache_delete.active_support
+
+CODE EXAMPLE
+```
+{
+  key: "name-of-complicated-computation",
+  store: "ActiveSupport::Cache::MemCacheStore"
+}
+```
+
+#### 3.12.10. cache_delete_multi.active_support
+
+#### 3.12.11. cache_delete_matched.active_support
+This event is only emitted when using RedisCacheStore, FileStore, or MemoryStore.
+
+CODE EXAMPLE
+```
+{
+  key: "posts/*",
+  store: "ActiveSupport::Cache::RedisCacheStore"
+}
+```
+
+#### 3.12.12. cache_cleanup.active_support
+This event is only emitted when using MemoryStore.
+
+CODE EXAMPLE
+```
+{
+  store: "ActiveSupport::Cache::MemoryStore",
+  size: 9001
+}
+```
+
+#### 3.12.13. cache_prune.active_support
+This event is only emitted when using MemoryStore.
+
+CODE EXAMPLE
+```
+{
+  store: "ActiveSupport::Cache::MemoryStore",
+  key: 5000,
+  from: 9001
+}
+```
+
+#### 3.12.14. cache_exist?.active_support
+
+CODE EXAMPLE
+```
+{
+  key: "name-of-complicated-computation",
+  store: "ActiveSupport::Cache::MemCacheStore"
+}
+```
+
+### 3.13. Active Support: Messages
+
+#### 3.13.1. message_serializer_fallback.active_support
+
+CODE EXAMPLE
+```
+{
+  serializer: :json_allow_marshal,
+  fallback: :marshal,
+  serialized: "\x04\b{\x06I\"\nHello\x06:\x06ETI\"\nWorld\x06;\x00T",
+  deserialized: { "Hello" => "World" },
+}
+```
+
+### 3.14. Rails
+
+#### 3.14.1. deprecation.rails
+
+### 3.15. Railties
+
+#### 3.15.1. load_config_initializer.railties
+
+## 4. Exceptions
+If an exception happens during any instrumentation, the payload will include information about it.
+
+## 5. Creating Custom Events
+Adding your own events is easy as well. Active Support will take care of all the heavy lifting for you. Simply call ActiveSupport::Notifications.instrument with a name, payload, and a block. The notification will be sent after the block returns. Active Support will generate the start and end times, and add the instrumenter's unique ID. All data passed into the instrument call will make it into the payload.
+Here's an example:
+
+CODE EXAMPLE
+```
+ActiveSupport::Notifications.instrument "my.custom.event", this: :data do
+  # do your custom stuff here
+end
+```
+Now you can listen to this event with:
+
+CODE EXAMPLE
+```
+ActiveSupport::Notifications.subscribe "my.custom.event" do |name, started, finished, unique_id, data|
+  puts data.inspect # {:this=>:data}
+end
+```
+You may also call instrument without passing a block. This lets you leverage the instrumentation infrastructure for other messaging uses.
+
+CODE EXAMPLE
+```
+ActiveSupport::Notifications.instrument "my.custom.event", this: :data
+
+ActiveSupport::Notifications.subscribe "my.custom.event" do |name, started, finished, unique_id, data|
+  puts data.inspect # {:this=>:data}
+end
+```
+You should follow Rails conventions when defining your own events. The format is: event.library. If your application is sending Tweets, you should create an event named tweet.twitter.

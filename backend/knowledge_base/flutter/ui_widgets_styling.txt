@@ -1,0 +1,12 @@
+# Styling widgets
+SOURCE: https://docs.flutter.dev/ui/widgets/styling
+Flutter 3.47 is here! Read the blog post.
+
+# Styling widgets
+A catalog of Flutter's styling widgets. Manage the theme of your app, make your app responsive to screen sizes, or add padding.
+Manage the theme of your app, make your app responsive to screen sizes, or add padding.
+Establishes a subtree in which media queries resolve to the given data.
+A widget that insets its child by the given padding.
+Applies a theme to descendant widgets. A theme describes the colors and typographic choices of an application.
+Find more widgets in the widget catalog.
+Unless stated otherwise, the documentation on this site reflects Flutter 3.47. Page last updated on 2026-05-31. Report an issue.

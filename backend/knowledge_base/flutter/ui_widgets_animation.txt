@@ -1,0 +1,38 @@
+# Animation and motion widgets
+SOURCE: https://docs.flutter.dev/ui/widgets/animation
+Flutter 3.47 is here! Read the blog post.
+
+# Animation and motion widgets
+A catalog of Flutter's animation and motion widgets. Bring animations to your app.
+Bring animations to your app.
+Animated version of an Align that animates its Align.alignment property.
+Animated transition that moves the child's position over a given duration whenever the given alignment changes.
+A general-purpose widget for building animations. AnimatedBuilder is useful for more complex widgets that wish to include animation as part of a larger build function....
+A container that gradually changes its values over a period of time.
+A widget that cross-fades between two given children and animates itself between their sizes.
+Animated version of DefaultTextStyle which automatically transitions the default text style (the text style to apply to descendant Text widgets without explicit style) over a...
+A scrolling container that animates items when they are inserted or removed.
+The state for a scrolling container that animates items when they are inserted or removed.
+A widget that prevents the user from interacting with widgets behind itself.
+Animated version of Opacity which automatically transitions the child's opacity over a given duration whenever the given opacity changes.
+Animated version of PhysicalModel.
+Animated version of Positioned which automatically transitions the child's position over a given duration whenever the given position changes.
+Animated version of Transform.scale that automatically transitions the child's scale over a given duration whenever the given scale changes.
+Animated widget that automatically transitions its size over a given duration whenever the given child's size changes.
+A widget that rebuilds when the given Listenable changes value.
+An abstract class for building widgets that animate changes to their properties.
+Animated version of a DecoratedBox that animates the different properties of its Decoration.
+Animated version of a DefaultTextStyle that animates the different properties of its TextStyle.
+Animates the opacity of a widget.
+A widget that marks its child as being a candidate for hero animations.
+Animates the Matrix4 of a transformed widget.
+Animated version of Positioned which takes a specific Animation to transition the child's position from a start position to and end position over the lifetime...
+Animated version of Positioned which transitions the child's position based on the value of rect relative to a bounding box with the specified size.
+A widget that animates an Animatable value and repeats indefinitely.
+Animates the rotation of a widget.
+Animates the scale of transformed widget.
+Animates its own size and clips and aligns the child.
+Animates the position of a widget relative to its normal position.
+Animates the opacity of a sliver widget.
+Find more widgets in the widget catalog.
+Unless stated otherwise, the documentation on this site reflects Flutter 3.47. Page last updated on 2026-05-31. Report an issue.

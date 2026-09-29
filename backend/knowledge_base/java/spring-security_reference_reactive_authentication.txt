@@ -1,0 +1,9 @@
+# Authentication :: Spring Security
+SOURCE: https://docs.spring.io/spring-security/reference/reactive/authentication/
+
+# Authentication
+
+## Section Summary
+- X.509 Authentication
+- Logout
+- Session Management

@@ -1,0 +1,135 @@
+# Overview of ASP.NET Core SignalR | Microsoft Learn
+SOURCE: https://learn.microsoft.com/en-us/aspnet/core/signalr/introduction
+Note
+Access to this page requires authorization. You can try signing in or changing directories.
+Access to this page requires authorization. You can try changing directories.
+
+# Overview of ASP.NET Core SignalR
+ASP.NET Core SignalR is an open-source library that simplifies adding real-time web functionality to apps. Real-time web functionality enables server-side code to push content to clients instantly. There are many scenarios where an ASP.NET Core application can benefit from SignalR:
+This article provides an introduction to working with SignalR in your ASP.NET Core apps.
+
+## Features and source code
+SignalR provides an API for creating server-to-client remote procedure calls (RPC). The RPCs invoke functions on clients from server-side .NET code. There are several supported platforms, each with their respective client SDK. The programming language invoked by the RPC call varies based on the platform.
+SignalR for ASP.NET Core provides developers with many features:
+- Handle connection management automatically
+- Send messages to all connected clients simultaneously (for example, a chat room)
+- Send messages to specific clients or groups of clients
+- Scale to handle increasing traffic with options like the Azure SignalR Service and Redis backplane
+- Support trimming and native ahead-of-time (AOT) compilation for supported scenarios
+- Support polymorphic type handling in hub methods
+- Support distributed tracing with ActivitySource for SignalR hub server and .NET client
+- Work with the SignalR Hub Protocol
+The source is hosted in the ASP.NET Core SignalR repository on GitHub.
+
+## Transports
+SignalR supports the following techniques for handling real-time communication (in order of graceful fallback):
+- WebSockets
+- Server-sent events
+- Long polling
+SignalR automatically chooses the best transport method within the capabilities of the server and client. WebSockets is the preferred transport because it generally provides the best performance.
+
+## Hubs
+SignalR uses hubs to communicate between clients and servers.
+A hub is a high-level pipeline that a client and server use to call methods on each other. SignalR automatically handles the dispatching across machine boundaries, so clients can call methods on the server and vice versa. You can pass strongly typed parameters to methods and enable model binding.
+SignalR supports two built-in hub protocols:
+- A text protocol based on JSON (default)
+- A binary protocol based on MessagePack. MessagePack generally creates smaller messages compared to JSON. For more information, see Use MessagePack Hub Protocol in SignalR for ASP.NET Core.
+Hubs call client-side code by sending messages that contain the name and parameters of the client-side method. The configured protocol deserializes objects sent as method parameters. The client tries to match the name to a method in the client-side code. When the client finds a match, it calls the method and passes the deserialized parameter data.
+
+## Related content
+- Get started with ASP.NET Core SignalR
+- ASP.NET Core SignalR supported platforms
+- Use hubs in ASP.NET Core SignalR
+- Logging and diagnostics in ASP.NET Core SignalR
+- ASP.NET Core SignalR production hosting and scaling
+- ASP.NET Core SignalR JavaScript client
+- ASP.NET Core Blazor SignalR guidance
+
+## What is SignalR?
+ASP.NET Core SignalR is an open-source library that simplifies adding real-time web functionality to apps. Real-time web functionality enables server-side code to push content to clients instantly.
+Good candidates for SignalR:
+- Apps that require high frequency updates from the server. Examples are gaming, social networks, voting, auction, maps, and GPS apps.
+- Dashboards and monitoring apps. Examples include company dashboards, instant sales updates, or travel alerts.
+- Collaborative apps. Whiteboard apps and team meeting software are examples of collaborative apps.
+- Apps that require notifications. Social networks, email, chat, games, travel alerts, and many other apps use notifications.
+SignalR provides an API for creating server-to-client remote procedure calls (RPC). The RPCs invoke functions on clients from server-side .NET code. There are several supported platforms, each with their respective client SDK. Because of this, the programming language being invoked by the RPC call varies.
+Here are some features of SignalR for ASP.NET Core:
+- Handles connection management automatically.
+- Sends messages to all connected clients simultaneously. For example, a chat room.
+- Sends messages to specific clients or groups of clients.
+- Scales to handle increasing traffic with options such as the Azure SignalR Service and Redis backplane.
+- Supports trimming and native ahead-of-time (AOT) compilation for supported scenarios.
+- Supports polymorphic type handling in hub methods.
+- Supports distributed tracing with ActivitySource for SignalR hub server and .NET client.
+- SignalR Hub Protocol
+The source is hosted in a SignalR repository on GitHub.
+
+## Transports
+SignalR supports the following techniques for handling real-time communication (in order of graceful fallback):
+- WebSockets
+- Server-Sent Events
+- Long Polling
+SignalR automatically chooses the best transport method that is within the capabilities of the server and client. WebSockets is the preferred transport because it generally provides the best performance.
+
+## Hubs
+SignalR uses hubs to communicate between clients and servers.
+A hub is a high-level pipeline that allows a client and server to call methods on each other. SignalR handles the dispatching across machine boundaries automatically, allowing clients to call methods on the server and vice versa. You can pass strongly-typed parameters to methods, which enables model binding. SignalR supports two built-in hub protocols: a text protocol based on JSON (default) and a binary protocol based on MessagePack. MessagePack generally creates smaller messages compared to JSON. For more information, see Use MessagePack Hub Protocol in SignalR for ASP.NET Core.
+Hubs call client-side code by sending messages that contain the name and parameters of the client-side method. Objects sent as method parameters are deserialized using the configured protocol. The client tries to match the name to a method in the client-side code. When the client finds a match, it calls the method and passes to it the deserialized parameter data.
+
+## Additional resources
+- Get started with SignalR for ASP.NET Core
+- Supported Platforms
+- Hubs
+- Logging and diagnostics in ASP.NET Core SignalR
+- Hosting and scaling ASP.NET Core SignalR
+- JavaScript client
+- ASP.NET Core Blazor SignalR guidance
+
+## What is SignalR?
+ASP.NET Core SignalR is an open-source library that simplifies adding real-time web functionality to apps. Real-time web functionality enables server-side code to push content to clients instantly.
+Good candidates for SignalR:
+- Apps that require high frequency updates from the server. Examples are gaming, social networks, voting, auction, maps, and GPS apps.
+- Dashboards and monitoring apps. Examples include company dashboards, instant sales updates, or travel alerts.
+- Collaborative apps. Whiteboard apps and team meeting software are examples of collaborative apps.
+- Apps that require notifications. Social networks, email, chat, games, travel alerts, and many other apps use notifications.
+SignalR provides an API for creating server-to-client remote procedure calls (RPC). The RPCs invoke functions on clients from server-side .NET code. There are several supported platforms, each with their respective client SDK. Because of this, the programming language being invoked by the RPC call varies.
+Here are some features of SignalR for ASP.NET Core:
+- Handles connection management automatically.
+- Sends messages to all connected clients simultaneously. For example, a chat room.
+- Sends messages to specific clients or groups of clients.
+- Scales to handle increasing traffic.
+- SignalR Hub Protocol
+The source is hosted in a SignalR repository on GitHub.
+
+## Transports
+SignalR supports the following techniques for handling real-time communication (in order of graceful fallback):
+- WebSockets
+- Server-Sent Events
+- Long Polling
+SignalR automatically chooses the best transport method that is within the capabilities of the server and client.
+
+## Hubs
+SignalR uses hubs to communicate between clients and servers.
+A hub is a high-level pipeline that allows a client and server to call methods on each other. SignalR handles the dispatching across machine boundaries automatically, allowing clients to call methods on the server and vice versa. You can pass strongly-typed parameters to methods, which enables model binding. SignalR provides two built-in hub protocols: a text protocol based on JSON and a binary protocol based on MessagePack. MessagePack generally creates smaller messages compared to JSON. Older browsers must support XHR level 2 to provide MessagePack protocol support.
+Hubs call client-side code by sending messages that contain the name and parameters of the client-side method. Objects sent as method parameters are deserialized using the configured protocol. The client tries to match the name to a method in the client-side code. When the client finds a match, it calls the method and passes to it the deserialized parameter data.
+
+## Browsers that don't support ECMAScript 6 (ES6)
+SignalR targets ES6. For browsers that don't support ES6, transpile the library to ES5. For more information, see Getting Started with ES6 – Transpiling ES6 to ES5 with Traceur and Babel.
+
+## Additional resources
+- Introduction to ASP.NET Core SignalR
+- Get started with SignalR for ASP.NET Core
+- Supported Platforms
+- Hubs
+- JavaScript client
+- Browsers that don't support ECMAScript 6 (ES6)
+- ASP.NET Core Blazor SignalR guidance
+ASP.NET Core
+
+## Feedback
+Was this page helpful?
+Need help with this topic?
+Want to try using Ask Learn to clarify or guide you through this topic?
+
+## Additional resources
+- Last updated on 2026-05-22

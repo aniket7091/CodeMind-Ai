@@ -1,0 +1,35 @@
+# Using slivers to achieve fancy scrolling
+SOURCE: https://docs.flutter.dev/ui/layout/scrolling/slivers
+Flutter 3.47 is here! Read the blog post.
+
+# Using slivers to achieve fancy scrolling
+Where to find information on using slivers to implement fancy scrolling effects, like elastic scrolling, in Flutter.
+A sliver is a portion of a scrollable area that you can define to behave in a special way. You can use slivers to achieve custom scrolling effects, such as elastic scrolling.
+For a free, instructor-led video workshop that uses DartPad, check out the following video about using slivers.
+Watch on YouTube in a new tab: "Building scrolling experiences in Flutter"
+
+## Resources
+For more information on implementing fancy scrolling effects in Flutter, see the following resources:
+
+Slivers, Demystified
+A Flutter blog post that explains how to implement custom scrolling using the sliver classes.
+
+SliverAppBar
+A one-minute Widget-of-the-week video that gives an overview of the SliverAppBar widget.
+Watch on YouTube in a new tab: "SliverAppBar | Flutter widget of the week"
+
+SliverList and SliverGrid
+A one-minute Widget-of-the-week video that gives an overview of the SliverList and SliverGrid widgets.
+Watch on YouTube in a new tab: "SliverList & SliverGrid | Flutter widget of the week"
+
+Slivers explained - Making dynamic layouts
+A 50-minute episode of The Boring Show where Ian Hickson, Flutter's Tech Lead, and Filip Hracek discuss the power of slivers.
+Watch on YouTube in a new tab: "Slivers explained - Making dynamic layouts"
+
+## API docs
+To learn more about the available sliver APIs, check out these related API docs:
+- CustomScrollView
+- SliverAppBar
+- SliverGrid
+- SliverList
+Unless stated otherwise, the documentation on this site reflects Flutter 3.47. Page last updated on 2026-07-29. View source or report an issue.

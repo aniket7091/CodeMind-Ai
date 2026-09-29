@@ -1,0 +1,483 @@
+# Drizzle | NestJS - A progressive Node.js framework
+SOURCE: https://docs.nestjs.com/data/drizzle
+
+### Drizzle
+As an alternative to TypeORM, you can use Drizzle ORM with the @nestjs/drizzle package. Drizzle is a lightweight, TypeScript-first ORM. You declare tables with plain functions and write queries with a SQL-like query builder (or the relational query API for nested reads), and Drizzle infers every result type from the schema. There are no entity classes, decorators, or code generation steps.
+To get started, install the required dependencies. This chapter uses PostgreSQL with the node-postgres driver, but Drizzle supports many other databases, including MySQL, SQLite, and Microsoft SQL Server, as well as serverless databases such as Neon, Turso, and Cloudflare D1. The steps in this chapter are the same for every database Drizzle supports: install the driver for your database, and import drizzle() from the matching entry point (e.g., drizzle-orm/mysql2 or drizzle-orm/libsql) instead of drizzle-orm/node-postgres.
+
+CODE EXAMPLE
+LANGUAGE: bash
+```
+$ npm install --save @nestjs/drizzle drizzle-orm@rc pg
+$ npm install --save-dev drizzle-kit@rc @types/pg
+```
+
+#### Schema#
+With Drizzle, you write the database schema in TypeScript. You declare each table with a function such as pgTable() and export it from a schema file. Let's define the users table:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+import { boolean, integer, pgTable, text } from 'drizzle-orm/pg-core';
+
+export const users = pgTable('users', {
+  id: integer().primaryKey().generatedAlwaysAsIdentity(),
+  firstName: text('first_name').notNull(),
+  lastName: text('last_name').notNull(),
+  isActive: boolean('is_active').notNull().default(true),
+});
+
+export type User = typeof users.$inferSelect;
+export type NewUser = typeof users.$inferInsert;
+```
+The $inferSelect and $inferInsert helpers derive the row types from the table definition, so there's no separate model class to keep in sync with the schema. For the available column types, see Schema declaration in the Drizzle documentation.
+
+#### Registering the database#
+Once the dependencies are installed and the schema is defined, import the DrizzleModule into the root AppModule:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+import { Module } from '@nestjs/common';
+import { DrizzleModule } from '@nestjs/drizzle';
+import { drizzle } from 'drizzle-orm/node-postgres';
+
+@Module({
+  imports: [
+    DrizzleModule.forRoot({
+      drizzle,
+      connection: process.env.DATABASE_URL!,
+    }),
+  ],
+})
+export class AppModule {}
+```
+The drizzle option takes the drizzle() function of your driver. DrizzleModule calls it with the connection and the other Drizzle options once for each application instance. Every application, including each one your e2e tests create, therefore gets its own connection pool, which is closed when that application shuts down. Because you pass the function, every driver Drizzle supports works the same way, and TypeScript checks connection and the other options against that driver's drizzle() signature.
+The forRoot() method supports the following options:
+Other options, such as relations, logger, or casing, are passed to drizzle() as well.
+Once the module is registered, you can inject the database anywhere in the project (without importing any modules) with the @InjectDrizzle() decorator. For example:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+import { Injectable } from '@nestjs/common';
+import { InjectDrizzle } from '@nestjs/drizzle';
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
+
+@Injectable()
+export class AppService {
+  constructor(
+    @InjectDrizzle()
+    private readonly db: NodePgDatabase,
+  ) {}
+}
+```
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+import { Injectable, Dependencies } from '@nestjs/common';
+import { getDrizzleToken } from '@nestjs/drizzle';
+
+@Injectable()
+@Dependencies(getDrizzleToken())
+export class AppService {
+  constructor(db) {
+    this.db = db;
+  }
+}
+```
+To register a database that you create yourself, e.g., one that routes reads to replicas with Drizzle's withReplicas() function, pass it as db instead. Create it in a forRootAsync() factory, which runs once for each application:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+import { Module } from '@nestjs/common';
+import { DrizzleModule } from '@nestjs/drizzle';
+import { drizzle } from 'drizzle-orm/node-postgres';
+import { withReplicas } from 'drizzle-orm/pg-core';
+
+@Module({
+  imports: [
+    DrizzleModule.forRootAsync({
+      useFactory: () => ({
+        db: withReplicas(drizzle(process.env.DATABASE_URL!), [
+          drizzle(process.env.REPLICA_DATABASE_URL!),
+        ]),
+      }),
+    }),
+  ],
+})
+export class AppModule {}
+```
+
+#### Queries#
+Unlike the TypeORM integration, Drizzle has no forFeature() step. Drizzle tables are plain objects that you import wherever you build queries, and the database is registered globally, so any provider can inject it. Let's implement the UsersService:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+import { Injectable } from '@nestjs/common';
+import { InjectDrizzle } from '@nestjs/drizzle';
+import { eq } from 'drizzle-orm';
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import { users, type NewUser, type User } from '../db/schema.js';
+
+@Injectable()
+export class UsersService {
+  constructor(
+    @InjectDrizzle()
+    private readonly db: NodePgDatabase,
+  ) {}
+
+  findAll(): Promise<User[]> {
+    return this.db.select().from(users);
+  }
+
+  async findOne(id: number): Promise<User | undefined> {
+    const [user] = await this.db.select().from(users).where(eq(users.id, id));
+    return user;
+  }
+
+  async create(user: NewUser): Promise<User> {
+    const [createdUser] = await this.db.insert(users).values(user).returning();
+    return createdUser;
+  }
+
+  async remove(id: number): Promise<void> {
+    await this.db.delete(users).where(eq(users.id, id));
+  }
+}
+```
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+import { Injectable, Dependencies } from '@nestjs/common';
+import { getDrizzleToken } from '@nestjs/drizzle';
+import { eq } from 'drizzle-orm';
+import { users } from '../db/schema.js';
+
+@Injectable()
+@Dependencies(getDrizzleToken())
+export class UsersService {
+  constructor(db) {
+    this.db = db;
+  }
+
+  findAll() {
+    return this.db.select().from(users);
+  }
+
+  async findOne(id) {
+    const [user] = await this.db.select().from(users).where(eq(users.id, id));
+    return user;
+  }
+
+  async create(user) {
+    const [createdUser] = await this.db.insert(users).values(user).returning();
+    return createdUser;
+  }
+
+  async remove(id) {
+    await this.db.delete(users).where(eq(users.id, id));
+  }
+}
+```
+A Drizzle query runs when it's awaited (or returned from an async function), and its result type is inferred from the columns it selects. The Drizzle documentation covers selecting, inserting, updating, and deleting rows in detail.
+
+#### Relations#
+Relations are associations between two or more tables, based on common fields, usually primary and foreign keys. Drizzle's relational queries use them to fetch nested data, such as users together with their photos, without writing joins by hand.
+Let's add a photos table whose userId column references the users table:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+export const photos = pgTable('photos', {
+  id: integer().primaryKey().generatedAlwaysAsIdentity(),
+  url: text().notNull(),
+  userId: integer('user_id')
+    .notNull()
+    .references(() => users.id),
+});
+```
+You declare the relations for the whole schema at once, with the defineRelations() function. For example, each user can have many photos, and each photo belongs to one user:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+import { defineRelations } from 'drizzle-orm';
+import * as schema from './schema.js';
+
+export const relations = defineRelations(schema, (r) => ({
+  users: {
+    photos: r.many.photos(),
+  },
+  photos: {
+    user: r.one.users({
+      from: r.photos.userId,
+      to: r.users.id,
+    }),
+  },
+}));
+```
+To make the relations available to relational queries, pass them to drizzle() with the relations option:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+DrizzleModule.forRoot({
+  drizzle,
+  connection: process.env.DATABASE_URL!,
+  relations,
+}),
+```
+The database type now depends on the relations, so declare it once and reuse it wherever you inject the database:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import type { relations } from './relations.js';
+
+export type Database = NodePgDatabase<typeof relations>;
+```
+With that in place, the db.query API is fully typed:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+@Injectable()
+export class UsersService {
+  constructor(
+    @InjectDrizzle()
+    private readonly db: Database,
+  ) {}
+
+  findOneWithPhotos(id: number) {
+    return this.db.query.users.findFirst({
+      where: { id },
+      with: { photos: true },
+    });
+  }
+}
+```
+
+#### Drizzle Transactions#
+A database transaction is a unit of work that the database management system treats as a whole, independently of other transactions: either all of its changes are applied, or none of them are. To learn more, see Database transaction on Wikipedia.
+To start a Drizzle transaction, call the transaction() method of the injected database. The callback receives a transaction object (tx) that exposes the same query API as the database:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+async deactivate(id: number) {
+  await this.db.transaction(async (tx) => {
+    await tx.update(users).set({ isActive: false }).where(eq(users.id, id));
+    await tx.delete(photos).where(eq(photos.userId, id));
+  });
+}
+```
+If the callback throws or calls tx.rollback(), the transaction is rolled back and transaction() rejects with the error. Otherwise, the transaction is committed, and transaction() resolves with the value the callback returned. Queries that belong to the transaction must run through tx, not through the injected database.
+
+#### Custom repositories#
+Drizzle has no repository layer: you build queries from the injected database and the table definitions. To keep the queries for a table in one place, and to make the classes that use them easy to unit test, you can write a repository yourself as a regular provider:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+import { Injectable } from '@nestjs/common';
+import { InjectDrizzle } from '@nestjs/drizzle';
+import { eq } from 'drizzle-orm';
+import type { Database } from '../db/database.js';
+import { users, type User } from '../db/schema.js';
+
+@Injectable()
+export class UsersRepository {
+  constructor(
+    @InjectDrizzle()
+    private readonly db: Database,
+  ) {}
+
+  findActive(): Promise<User[]> {
+    return this.db.select().from(users).where(eq(users.isActive, true));
+  }
+
+  async deactivate(id: number): Promise<void> {
+    await this.db.update(users).set({ isActive: false }).where(eq(users.id, id));
+  }
+}
+```
+Register UsersRepository in the providers array of UsersModule, and inject it into UsersService instead of the database. In unit tests, replace it with a custom provider whose useValue is an object implementing the methods your service calls, such as findActive().
+
+#### Migrations#
+Migrations incrementally update the database schema to keep it in sync with the application's data model, while preserving the existing data. To generate and run migrations, Drizzle provides a dedicated CLI, Drizzle Kit, which reads its settings from a drizzle.config.ts file in the root directory of your project:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+import { defineConfig } from 'drizzle-kit';
+
+export default defineConfig({
+  dialect: 'postgresql',
+  schema: './src/db/schema.ts',
+  out: './drizzle',
+  dbCredentials: {
+    url: process.env.DATABASE_URL!,
+  },
+});
+```
+With that file in place, npx drizzle-kit generate creates SQL migration files from your schema changes, and npx drizzle-kit migrate applies them to the database.
+Drizzle Kit runs outside your Nest application, so migrations can't use dependency injection or other Nest-specific features. Drizzle Kit loads the .env file from the directory you run it in, so process.env.DATABASE_URL is available in drizzle.config.ts without ConfigModule. Variables already set in the environment take precedence over the file.
+To apply pending migrations when the application starts instead, create the database in a forRootAsync() factory and apply them there. The factory can be async, and Nest doesn't create the providers that inject the database until it resolves:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+import { drizzle } from 'drizzle-orm/node-postgres';
+import { migrate } from 'drizzle-orm/node-postgres/migrator';
+
+DrizzleModule.forRootAsync({
+  useFactory: async () => {
+    const db = drizzle(process.env.DATABASE_URL!, { relations });
+    await migrate(db, { migrationsFolder: './drizzle' });
+    return { db };
+  },
+}),
+```
+Learn the right way! 80+ chapters 5+ hours of videos Official certificate Deep-dive sessions Explore official courses
+
+## Learn the right way!
+- 80+ chapters
+- 5+ hours of videos
+- Official certificate
+- Deep-dive sessions
+
+#### Multiple databases#
+Some projects require multiple database connections, and the DrizzleModule supports this as well. Register each database with its own DrizzleModule import. In this case, every database except one must have a name:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+@Module({
+  imports: [
+    DrizzleModule.forRoot({
+      drizzle,
+      connection: process.env.DATABASE_URL!,
+      relations,
+    }),
+    DrizzleModule.forRoot({
+      name: 'analytics',
+      drizzle,
+      connection: process.env.ANALYTICS_DATABASE_URL!,
+    }),
+  ],
+})
+export class AppModule {}
+```
+The databases don't have to share a driver: analytics could just as well be a SQLite file opened with the drizzle() function from drizzle-orm/better-sqlite3. To inject a database other than the default one, pass its name to the @InjectDrizzle() decorator:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+@Injectable()
+export class ReportsService {
+  constructor(
+    @InjectDrizzle('analytics')
+    private readonly analyticsDb: NodePgDatabase,
+  ) {}
+}
+```
+You can also inject any database into a factory provider with the getDrizzleToken() function, which returns the injection token of the database with the given name:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+@Module({
+  providers: [
+    {
+      provide: ReportsService,
+      useFactory: (analyticsDb: NodePgDatabase) => {
+        return new ReportsService(analyticsDb);
+      },
+      inject: [getDrizzleToken('analytics')],
+    },
+  ],
+})
+export class ReportsModule {}
+```
+
+#### Testing#
+When unit testing an application, you usually want to avoid connecting to a database, to keep test suites independent and fast. However, your classes depend on the database injected with @InjectDrizzle(). To solve this, replace the database with a mock, using a custom provider. The getDrizzleToken() function returns the injection token of the default database (or of the database whose name you pass):
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+@Module({
+  providers: [
+    UsersService,
+    {
+      provide: getDrizzleToken(),
+      useValue: mockDb,
+    },
+  ],
+})
+export class UsersModule {}
+```
+Nest now injects the mockDb object wherever a class requests the database with the @InjectDrizzle() decorator. Drizzle's query builder is chainable (e.g., select().from().where()), so a mock has to implement every method in the chain your code calls. For anything beyond simple queries, either move the queries into custom repositories and mock those, or run these tests against a real database.
+
+#### Async configuration#
+To pass the DrizzleModule options asynchronously instead of statically, use the forRootAsync() method. It supports several ways to provide the options.
+One approach is a factory function. The factory behaves like any other asynchronous provider: it can be async, and it can inject dependencies through inject. It returns the same options as forRoot() (except name), either drizzle and connection or a db instance:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+DrizzleModule.forRootAsync({
+  imports: [ConfigModule],
+  useFactory: (configService: ConfigService) => ({
+    drizzle,
+    connection: configService.getOrThrow<string>('DATABASE_URL'),
+    relations,
+  }),
+  inject: [ConfigService],
+});
+```
+Alternatively, you can use the useClass syntax:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+DrizzleModule.forRootAsync({
+  imports: [ConfigModule],
+  useClass: DrizzleConfigService,
+});
+```
+With this construction, DrizzleModule instantiates DrizzleConfigService, resolving its dependencies from the modules in imports, and calls its createDrizzleOptions() method to get the options. DrizzleConfigService must therefore implement the DrizzleOptionsFactory interface:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+@Injectable()
+class DrizzleConfigService implements DrizzleOptionsFactory {
+  constructor(private readonly configService: ConfigService) {}
+
+  createDrizzleOptions(): DrizzleModuleFactoryOptions {
+    return {
+      drizzle,
+      connection: this.configService.getOrThrow<string>('DATABASE_URL'),
+      relations,
+    };
+  }
+}
+```
+To reuse a provider from another module instead of instantiating DrizzleConfigService inside DrizzleModule, use the useExisting syntax:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+DrizzleModule.forRootAsync({
+  imports: [DatabaseConfigModule],
+  useExisting: DrizzleConfigService,
+});
+```
+This works like useClass, with one critical difference: DrizzleModule reuses the DrizzleConfigService instance exported by an imported module (here, DatabaseConfigModule) instead of creating a new one.

@@ -1,0 +1,1672 @@
+# HTTP.sys web server implementation in ASP.NET Core | Microsoft Learn
+SOURCE: https://learn.microsoft.com/en-us/aspnet/core/fundamentals/servers/httpsys
+Note
+Access to this page requires authorization. You can try signing in or changing directories.
+Access to this page requires authorization. You can try changing directories.
+
+# HTTP.sys web server implementation in ASP.NET Core
+Note
+This isn't the latest version of this article. For the current release, see the .NET 10 version of this article.
+Warning
+This version of ASP.NET Core is no longer supported. For more information, see the .NET and .NET Core Support Policy. For the current release, see the .NET 10 version of this article.
+By Tom Dykstra and Chris Ross
+HTTP.sys is a web server for ASP.NET Core that only runs on Windows. HTTP.sys is an alternative to Kestrel server and offers some features that Kestrel doesn't provide.
+Important
+HTTP.sys isn't compatible with the ASP.NET Core Module and can't be used with IIS or IIS Express.
+HTTP.sys supports the following features:
+- Windows Authentication
+- Port sharing
+- HTTPS with SNI
+- HTTP/2 over TLS (Windows 10 or later)
+- HTTP/3 over TLS (Windows 11 or later)
+- Direct file transmission
+- Response caching
+- WebSockets (Windows 8 or later)
+- Customizable security descriptors
+- Automatic memory pool eviction
+Supported Windows versions:
+- Windows 7 or later
+- Windows Server 2008 R2 or later
+View or download sample code (how to download)
+
+## When to use HTTP.sys
+HTTP.sys is useful for deployments where:
+There's a need to expose the server directly to the Internet without using IIS.
+An internal deployment requires a feature not available in Kestrel. For more information, see Kestrel vs. HTTP.sys
+HTTP.sys is mature technology that protects against many types of attacks and provides the robustness, security, and scalability of a full-featured web server. IIS itself runs as an HTTP listener on top of HTTP.sys.
+
+## HTTP/2 support
+HTTP/2 is enabled for ASP.NET Core apps when the following base requirements are met:
+- Windows Server 2016/Windows 10 or later
+- Application-Layer Protocol Negotiation (ALPN) connection
+- TLS 1.2 or later connection
+If an HTTP/2 connection is established, HttpRequest.Protocol reports HTTP/2.
+HTTP/2 is enabled by default. If an HTTP/2 connection isn't established, the connection falls back to HTTP/1.1. In a future release of Windows, HTTP/2 configuration flags will be available, including the ability to disable HTTP/2 with HTTP.sys.
+
+## HTTP/3 support
+HTTP/3 is enabled for ASP.NET Core apps when the following base requirements are met:
+- Windows Server 2022/Windows 11 or later
+- An https url binding is used.
+- The EnableHttp3 registry key is set.
+The preceding Windows 11 Build versions may require the use of a Windows Insider build.
+HTTP/3 is discovered as an upgrade from HTTP/1.1 or HTTP/2 via the alt-svc header. That means the first request will normally use HTTP/1.1 or HTTP/2 before switching to HTTP/3. Http.Sys doesn't automatically add the alt-svc header, it must be added by the application. The following code is a middleware example that adds the alt-svc response header.
+
+CODE EXAMPLE
+LANGUAGE: csharp
+```
+app.Use((context, next) =>
+{
+    context.Response.Headers.AltSvc = "h3=\":443\"";
+    return next(context);
+});
+```
+Place the preceding code early in the request pipeline.
+Http.Sys also supports sending an AltSvc HTTP/2 protocol message rather than a response header to notify the client that HTTP/3 is available. See the EnableAltSvc registry key.
+Note
+This requires netsh sslcert bindings that use host names rather than IP addresses. Replace ipport with hostnameport in the netsh http add sslcert commands below, and replace the IP address with the hostname, for example, www.example.com. There's also a known issue where using hostnameport fails unless the certstorename parameter is specified. By default, use certstorename=MY.
+
+## Kernel mode authentication with Kerberos
+HTTP.sys delegates to kernel mode authentication with the Kerberos authentication protocol. User mode authentication isn't supported with Kerberos and HTTP.sys. The machine account must be used to decrypt the Kerberos token/ticket that's obtained from Active Directory and forwarded by the client to the server to authenticate the user. Register the Service Principal Name (SPN) for the host, not the user of the app.
+
+### Enable channel binding token (CBT) hardening
+Channel binding tokens (CBT) tie Windows authentication to the underlying TLS channel, which helps mitigate NTLM relay and man-in-the-middle attacks. For HTTPS endpoints that use Windows authentication with HTTP.sys, you can opt in to CBT hardening by setting the Microsoft.AspNetCore.Server.HttpSys.EnableCBTHardening AppContext switch to true.
+Enable the switch in your project's runtimeconfig.template.json file:
+
+CODE EXAMPLE
+LANGUAGE: json
+```
+{
+  "configProperties": {
+    "Microsoft.AspNetCore.Server.HttpSys.EnableCBTHardening": true
+  }
+}
+```
+Or set the switch programmatically before building the host in Program.cs:
+
+CODE EXAMPLE
+LANGUAGE: csharp
+```
+AppContext.SetSwitch("Microsoft.AspNetCore.Server.HttpSys.EnableCBTHardening", true);
+```
+Warning
+CBT hardening is off by default. Enabling it can cause Windows authentication to fail for clients or proxies that don't support channel binding. Test thoroughly in your environment before enabling in production.
+
+### Support for kernel-mode response buffering
+In some scenarios, high volumes of small writes with high latency can cause significant performance impact to HTTP.sys. This impact is due to the lack of a Pipe buffer in the HTTP.sys implementation. To improve performance in these scenarios, support for response buffering is included in HTTP.sys. Enable buffering by setting HttpSysOptions.EnableKernelResponseBuffering to true. Response buffering should be enabled by an app that does synchronous I/O, or asynchronous I/O with no more than one outstanding write at a time. In these scenarios, response buffering can significantly improve throughput over high-latency connections.
+Apps that use asynchronous I/O and that may have more than one write outstanding at a time should not use this flag. Enabling this flag can result in higher CPU and memory usage by HTTP.Sys.
+
+## How to use HTTP.sys
+
+### Configure the ASP.NET Core app to use HTTP.sys
+Call the UseHttpSys extension method when building the host, specifying any required HttpSysOptions. The following example sets options to their default values:
+
+CODE EXAMPLE
+LANGUAGE: csharp
+```
+using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Hosting.Server.Features;
+using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.Server.HttpSys;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.WebHost.UseHttpSys(options =>
+{
+    options.AllowSynchronousIO = false;
+    options.Authentication.Schemes = AuthenticationSchemes.None;
+    options.Authentication.AllowAnonymous = true;
+    options.MaxConnections = null;
+    options.MaxRequestBodySize = 30_000_000;
+    options.UrlPrefixes.Add("http://localhost:5005");
+});
+
+builder.Services.AddRazorPages();
+
+var app = builder.Build();
+```
+Additional HTTP.sys configuration is handled through registry settings.
+For more information about HTTP.sys options, see HttpSysOptions.
+
+### Customize security descriptors
+A request queue in HTTP.sys is a kernel-level structure that temporarily stores incoming HTTP requests until your application is ready to process them. Manage access to the request queue by using the RequestQueueSecurityDescriptor property on HttpSysOptions. Set it to a GenericSecurityDescriptor instance when configuring your HTTP.sys server.
+By customizing the security descriptor, you can allow or deny specific users or groups access to the request queue. This is useful in scenarios where you want to restrict or delegate HTTP.sys request handling at the operating system level.
+For example, the following code allows all authenticated users but denies guests:
+
+CODE EXAMPLE
+LANGUAGE: csharp
+```
+using System.Security.AccessControl;
+using System.Security.Principal;
+using Microsoft.AspNetCore.Server.HttpSys;
+
+// Create a new security descriptor
+var securityDescriptor = new CommonSecurityDescriptor(isContainer: false, isDS: false, sddlForm: string.Empty);
+
+// Create a discretionary access control list (DACL)
+var dacl = new DiscretionaryAcl(isContainer: false, isDS: false, capacity: 2);
+dacl.AddAccess(
+    AccessControlType.Allow,
+    new SecurityIdentifier(WellKnownSidType.BuiltinUsersSid, null),
+    -1,
+    InheritanceFlags.None,
+    PropagationFlags.None
+);
+dacl.AddAccess(
+    AccessControlType.Deny,
+    new SecurityIdentifier(WellKnownSidType.BuiltinGuestsSid, null),
+    -1,
+    InheritanceFlags.None,
+    PropagationFlags.None
+);
+
+// Assign the DACL to the security descriptor
+securityDescriptor.DiscretionaryAcl = dacl;
+
+// Configure HTTP.sys options
+var builder = WebApplication.CreateBuilder();
+builder.WebHost.UseHttpSys(options =>
+{
+    options.RequestQueueSecurityDescriptor = securityDescriptor;
+});
+```
+The RequestQueueSecurityDescriptor property applies only when creating a new request queue. The property doesn't affect existing request queues.
+MaxRequestBodySize
+The maximum allowed size of any request body in bytes. When set to null, the maximum request body size is unlimited. This limit has no effect on upgraded connections, which are always unlimited.
+The recommended method to override the limit in an ASP.NET Core MVC app for a single IActionResult is to use the RequestSizeLimitAttribute attribute on an action method:
+
+CODE EXAMPLE
+LANGUAGE: csharp
+```
+[RequestSizeLimit(100000000)]
+public IActionResult MyActionMethod()
+```
+An exception is thrown if the app attempts to configure the limit on a request after the app has started reading the request. An IsReadOnly property can be used to indicate if the MaxRequestBodySize property is in a read-only state, meaning it's too late to configure the limit.
+If the app should override MaxRequestBodySize per-request, use the IHttpMaxRequestBodySizeFeature:
+
+CODE EXAMPLE
+LANGUAGE: csharp
+```
+app.Use((context, next) =>
+{
+    context.Features.GetRequiredFeature<IHttpMaxRequestBodySizeFeature>()
+                                             .MaxRequestBodySize = 10 * 1024;
+
+    var server = context.RequestServices
+        .GetRequiredService<IServer>();
+    var serverAddressesFeature = server.Features
+                                 .GetRequiredFeature<IServerAddressesFeature>();
+
+    var addresses = string.Join(", ", serverAddressesFeature.Addresses);
+
+    var loggerFactory = context.RequestServices
+        .GetRequiredService<ILoggerFactory>();
+    var logger = loggerFactory.CreateLogger("Sample");
+
+    logger.LogInformation("Addresses: {addresses}", addresses);
+
+    return next(context);
+});
+```
+If using Visual Studio, make sure the app isn't configured to run IIS or IIS Express.
+In Visual Studio, the default launch profile is for IIS Express. To run the project as a console app, manually change the selected profile, as shown in the following screenshot:
+
+### Configure Windows Server
+Determine the ports to open for the app and use Windows Firewall or the New-NetFirewallRule PowerShell cmdlet to open firewall ports to allow traffic to reach HTTP.sys. In the following commands and app configuration, port 443 is used.
+When deploying to an Azure VM, open the ports in the Network Security Group. In the following commands and app configuration, port 443 is used.
+Obtain and install X.509 certificates, if required.
+On Windows, create self-signed certificates using the New-SelfSignedCertificate PowerShell cmdlet. For an unsupported example, see UpdateIISExpressSSLForChrome.ps1.
+Install either self-signed or CA-signed certificates in the server's Local Machine > Personal store.
+If the app is a framework-dependent deployment, install .NET, .NET Framework, or both (if the app is a .NET app targeting the .NET Framework).
+- .NET: If the app requires .NET, obtain and run the .NET Runtime installer from .NET Downloads. Don't install the full SDK on the server.
+- .NET Framework: If the app requires .NET Framework, see the .NET Framework installation guide. Install the required .NET Framework. The installer for the latest .NET Framework is available from the .NET Downloads page.
+If the app is a self-contained deployment, the app includes the runtime in its deployment. No framework installation is required on the server.
+Configure URLs and ports in the app.
+By default, ASP.NET Core binds to http://localhost:5000. To configure URL prefixes and ports, options include:
+- UseUrls
+- urls command-line argument
+- ASPNETCORE_URLS environment variable
+- UrlPrefixes
+The following code example shows how to use UrlPrefixes with the server's local IP address 10.0.0.4 on port 443:
+
+CODE EXAMPLE
+LANGUAGE: csharp
+```
+var builder = WebApplication.CreateBuilder(args);
+
+builder.WebHost.UseHttpSys(options =>
+{
+    options.UrlPrefixes.Add("https://10.0.0.4:443");
+});
+
+builder.Services.AddRazorPages();
+
+var app = builder.Build();
+```
+An advantage of UrlPrefixes is that an error message is generated immediately for improperly formatted prefixes.
+The settings in UrlPrefixes override UseUrls/urls/ASPNETCORE_URLS settings. Therefore, an advantage of UseUrls, urls, and the ASPNETCORE_URLS environment variable is that it's easier to switch between Kestrel and HTTP.sys.
+HTTP.sys recognizes two types of wild cards in URL prefixes:
+- * is a weak binding, also known as a fallback binding. If the URL prefix is http://*:5000, and something else is bound to port 5000, this binding won't be used.
+- + is a strong binding. If the URL prefix is http://+:5000, this binding will be used before other port 5000 bindings.
+For more information, see UrlPrefix Strings.
+Warning
+Top-level wildcard bindings (http://*:80/ and http://+:80) should not be used. Top-level wildcard bindings create app security vulnerabilities. This applies to both strong and weak wildcards. Use explicit host names or IP addresses rather than wildcards. Subdomain wildcard binding (for example, *.mysub.com) isn't a security risk if you control the entire parent domain (as opposed to *.com, which is vulnerable). For more information, see RFC 9110: Section 7.2: Host and :authority.
+Most configurations for apps and containers define only a port for listening, like port 80, without specifying other constraints like the host or path. HTTP_PORTS and HTTPS_PORTS are config keys that specify the listening ports for the Kestrel and HTTP.sys servers. You can specify the keys as environment variables defined with the DOTNET_ or ASPNETCORE_ prefixes, or set them directly through any other config input, such as the appsettings.json file. Each configuration is a semicolon-delimited list of port values, as shown in the following example:
+
+CODE EXAMPLE
+LANGUAGE: json
+```
+ASPNETCORE_HTTP_PORTS=80;8080
+ASPNETCORE_HTTPS_PORTS=443;8081
+```
+The configuration in the example is shorthand for the following specification, which defines the scheme (HTTP or HTTPS) and any host or IP:
+
+CODE EXAMPLE
+LANGUAGE: json
+```
+ASPNETCORE_URLS=http://*:80/;http://*:8080/;https://*:443/;https://*:8081/
+```
+The HTTP_PORTS and HTTPS_PORTS configuration keys are lower priority. If other URLs or values are set directly in code, they can override the configuration keys. Configure certificates separately using server-specific mechanics for HTTPS.
+Note
+Don't confuse the HTTPS_PORTS configuration key and ASPNETCORE_HTTPS_PORTS environment variable, which set the ports for Kestrel/HTTP.sys endpoint configuration, with the HTTPS_PORT configuration key and ASPNETCORE_HTTPS_PORT environment variable, which set the port for HTTPS redirection middleware.
+These configuration keys are equivalent to top-level wildcard bindings. They're convenient for development and container scenarios, but avoid wildcards when running on a machine that may also host other services.
+Preregister URL prefixes on the server.
+The built-in tool for configuring HTTP.sys is netsh.exe. netsh.exe is used to reserve URL prefixes and assign X.509 certificates. The tool requires administrator privileges.
+Use the netsh.exe tool to register URLs for the app:
+
+CODE EXAMPLE
+LANGUAGE: console
+```
+netsh http add urlacl url=<URL> user=<USER>
+```
+- <URL>: The fully qualified Uniform Resource Locator (URL). Don't use a wildcard binding. Use a valid hostname or local IP address. The URL must include a trailing slash.
+- <USER>: Specifies the user or user-group name.
+In the following example, the local IP address of the server is 10.0.0.4:
+
+CODE EXAMPLE
+LANGUAGE: console
+```
+netsh http add urlacl url=https://10.0.0.4:443/ user=Users
+```
+When a URL is registered, the tool responds with URL reservation successfully added.
+To delete a registered URL, use the delete urlacl command:
+
+CODE EXAMPLE
+LANGUAGE: console
+```
+netsh http delete urlacl url=<URL>
+```
+Register X.509 certificates on the server.
+Use the netsh.exe tool to register certificates for the app:
+
+CODE EXAMPLE
+LANGUAGE: console
+```
+netsh http add sslcert ipport=<IP>:<PORT> certhash=<THUMBPRINT> appid="{<GUID>}"
+```
+- <IP>: Specifies the local IP address for the binding. Don't use a wildcard binding. Use a valid IP address.
+- <PORT>: Specifies the port for the binding.
+- <THUMBPRINT>: The X.509 certificate thumbprint.
+- <GUID>: A developer-generated GUID to represent the app for informational purposes.
+For reference purposes, store the GUID in the app as a package tag:
+- In Visual Studio:
+- Open the app's project properties by right-clicking on the app in Solution Explorer and selecting Properties.
+- Select the Package tab.
+- Enter the GUID that you created in the Tags field.
+- When not using Visual Studio:
+Open the app's project file.
+Add a <PackageTags> property to a new or existing <PropertyGroup> with the GUID that you created:
+
+CODE EXAMPLE
+LANGUAGE: xml
+```
+<PropertyGroup>
+  <PackageTags>00001111-aaaa-2222-bbbb-3333cccc4444</PackageTags>
+</PropertyGroup>
+```
+In the following example:
+- The local IP address of the server is 10.0.0.4.
+- An online random GUID generator provides the appid value.
+
+CODE EXAMPLE
+LANGUAGE: console
+```
+netsh http add sslcert
+    ipport=10.0.0.4:443
+    certhash=b66ee04419d4ee37464ab8785ff02449980eae10
+    appid="{00001111-aaaa-2222-bbbb-3333cccc4444}"
+```
+When a certificate is registered, the tool responds with SSL Certificate successfully added.
+To delete a certificate registration, use the delete sslcert command:
+
+CODE EXAMPLE
+LANGUAGE: console
+```
+netsh http delete sslcert ipport=<IP>:<PORT>
+```
+Reference documentation for netsh.exe:
+- Netsh Commands for Hypertext Transfer Protocol (HTTP)
+- UrlPrefix Strings
+Run the app.
+Administrator privileges aren't required to run the app when binding to localhost using HTTP (not HTTPS) with a port number greater than 1024. For other configurations (for example, using a local IP address or binding to port 443), run the app with administrator privileges.
+The app responds at the server's public IP address. In this example, the server is reached from the Internet at its public IP address of 104.214.79.47.
+A development certificate is used in this example. The page loads securely after bypassing the browser's untrusted certificate warning.
+
+## Proxy server and load balancer scenarios
+For apps hosted by HTTP.sys that interact with requests from the Internet or a corporate network, additional configuration might be required when hosting behind proxy servers and load balancers. For more information, see Configure ASP.NET Core to work with proxy servers and load balancers.
+
+## Get detailed timing information with IHttpSysRequestTimingFeature
+IHttpSysRequestTimingFeature provides detailed timing information for requests:
+- Timestamps are obtained using QueryPerformanceCounter.
+- The timestamp frequency can be obtained via QueryPerformanceFrequency.
+- The index of the timing can be cast to HttpSysRequestTimingType to know what the timing represents.
+- The value may be 0 if the timing isn't available for the current request.
+- Requires Windows 10 version 2004, Windows Server 2022, or later.
+
+CODE EXAMPLE
+LANGUAGE: csharp
+```
+using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.Server.HttpSys;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.WebHost.UseHttpSys();
+
+var app = builder.Build();
+
+app.Use((context, next) =>
+{
+    var feature = context.Features.GetRequiredFeature<IHttpSysRequestTimingFeature>();
+
+    var loggerFactory = context.RequestServices.GetRequiredService<ILoggerFactory>();
+    var logger = loggerFactory.CreateLogger("Sample");
+
+    var timestamps = feature.Timestamps;
+
+    for (var i = 0; i < timestamps.Length; i++)
+    {
+        var timestamp = timestamps[i];
+        var timingType = (HttpSysRequestTimingType)i;
+
+        logger.LogInformation("Timestamp {timingType}: {timestamp}",
+                                          timingType, timestamp);
+    }
+
+    return next(context);
+});
+
+app.MapGet("/", () => Results.Ok());
+
+app.Run();
+```
+IHttpSysRequestTimingFeature.TryGetTimestamp retrieves the timestamp for the provided timing type:
+
+CODE EXAMPLE
+LANGUAGE: csharp
+```
+using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.Server.HttpSys;
+var builder = WebApplication.CreateBuilder(args);
+
+builder.WebHost.UseHttpSys();
+
+var app = builder.Build();
+
+app.Use((context, next) =>
+{
+    var feature = context.Features.GetRequiredFeature<IHttpSysRequestTimingFeature>();
+
+    var loggerFactory = context.RequestServices.GetRequiredService<ILoggerFactory>();
+    var logger = loggerFactory.CreateLogger("Sample");
+
+    var timingType = HttpSysRequestTimingType.RequestRoutingEnd;
+
+    if (feature.TryGetTimestamp(timingType, out var timestamp))
+    {
+        logger.LogInformation("Timestamp {timingType}: {timestamp}",
+                                          timingType, timestamp);
+    }
+    else
+    {
+        logger.LogInformation("Timestamp {timingType}: not available for the "
+                                           + "current request",    timingType);
+    }
+
+    return next(context);
+});
+
+app.MapGet("/", () => Results.Ok());
+
+app.Run();
+```
+[IHttpSysRequestTimingFeature.TryGetElapsedTime](/dotnet/api/microsoft.aspnetcore.server.httpsys.ihttpsysrequesttimingfeature.trygetelapsedtime yields the elapsed time between two specified timings:
+
+CODE EXAMPLE
+LANGUAGE: csharp
+```
+using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.Server.HttpSys;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.WebHost.UseHttpSys();
+
+var app = builder.Build();
+
+app.Use((context, next) =>
+{
+    var feature = context.Features.GetRequiredFeature<IHttpSysRequestTimingFeature>();
+
+    var loggerFactory = context.RequestServices.GetRequiredService<ILoggerFactory>();
+    var logger = loggerFactory.CreateLogger("Sample");
+
+    var startingTimingType = HttpSysRequestTimingType.RequestRoutingStart;
+    var endingTimingType = HttpSysRequestTimingType.RequestRoutingEnd;
+
+    if (feature.TryGetElapsedTime(startingTimingType, endingTimingType, out var elapsed))
+    {
+        logger.LogInformation(
+            "Elapsed time {startingTimingType} to {endingTimingType}: {elapsed}",
+            startingTimingType,
+            endingTimingType,
+            elapsed);
+    }
+    else
+    {
+        logger.LogInformation(
+            "Elapsed time {startingTimingType} to {endingTimingType}:"
+            + " not available for the current request.",
+            startingTimingType,
+            endingTimingType);
+    }
+
+    return next(context);
+});
+
+app.MapGet("/", () => Results.Ok());
+
+app.Run();
+```
+
+## Advanced HTTP/2 features to support gRPC
+Additional HTTP/2 features in HTTP.sys support gRPC, including support for response trailers and sending reset frames.
+Requirements to run gRPC with HTTP.sys:
+- Windows 11 Build 22000 or later, Windows Server 2022 Build 20348 or later.
+- TLS 1.2 or later connection.
+
+### Trailers
+HTTP Trailers are similar to HTTP Headers, except they are sent after the response body is sent. For IIS and HTTP.sys, only HTTP/2 response trailers are supported.
+
+CODE EXAMPLE
+LANGUAGE: csharp
+```
+if (httpContext.Response.SupportsTrailers())
+{
+    httpContext.Response.DeclareTrailer("trailername");
+
+    // Write body
+    httpContext.Response.WriteAsync("Hello world");
+
+    httpContext.Response.AppendTrailer("trailername", "TrailerValue");
+}
+```
+In the preceding example code:
+- SupportsTrailers ensures that trailers are supported for the response.
+- DeclareTrailer adds the given trailer name to the Trailer response header. Declaring a response's trailers is optional, but recommended. If DeclareTrailer is called, it must be before the response headers are sent.
+- AppendTrailer appends the trailer.
+
+### Reset
+Reset allows for the server to reset a HTTP/2 request with a specified error code. A reset request is considered aborted.
+
+CODE EXAMPLE
+LANGUAGE: csharp
+```
+var resetFeature = httpContext.Features.Get<IHttpResetFeature>();
+resetFeature.Reset(errorCode: 2);
+```
+Reset in the preceding code example specifies the INTERNAL_ERROR error code. For more information about HTTP/2 error codes, visit the HTTP/2 specification error code section.
+
+## Tracing
+For information about how to get traces from HTTP.sys, see HTTP.sys Manageability Scenarios.
+
+## Automatic eviction from memory pool
+The memory pools used by Kestrel, IIS, and HTTP.sys automatically evict memory blocks when the application is idle or under low load. The feature runs automatically and doesn't need to be enabled or configured manually.
+In versions of .NET earlier than 10, memory allocated by the pool remains reserved, even when not in use. This automatic eviction feature reduces overall memory usage and helps applications stay responsive under varying workloads.
+
+### Use memory pool metrics
+The default memory pool used by the ASP.NET Core server implementations includes metrics, which can be used to monitor and analyze memory usage patterns. The metrics are under the name "Microsoft.AspNetCore.MemoryPool".
+For information about metrics and how to use them, see ASP.NET Core metrics.
+
+## Manage memory pools
+Besides using memory pools efficiently by evicting unneeded memory blocks, ASP.NET Core provides a built-in IMemoryPoolFactory and an implementation. It makes the implementation available to your application through dependency injection.
+The following code example shows a simple background service that uses the built-in memory pool factory implementation to create memory pools. These pools benefit from the automatic eviction feature:
+
+CODE EXAMPLE
+LANGUAGE: csharp
+```
+public class MyBackgroundService : BackgroundService
+{
+    private readonly MemoryPool<byte> _memoryPool;
+
+    public MyBackgroundService(IMemoryPoolFactory<byte> factory)
+    {
+        _memoryPool = factory.Create();
+    }
+
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            try
+            {
+                await Task.Delay(20, stoppingToken);
+                // do work that needs memory
+                // consider checking _memoryPool.MaxBufferSize
+                var rented = _memoryPool.Rent(100);
+                rented.Dispose();
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+        }
+    }
+}
+```
+To use a custom memory pool factory, make a class that implements IMemoryPoolFactory and register it with dependency injection, as the following example does. Memory pools created this way do not benefit from the automatic eviction feature unless you implement similar eviction logic in your custom factory:
+
+CODE EXAMPLE
+LANGUAGE: csharp
+```
+services.AddSingleton<IMemoryPoolFactory<byte>,
+CustomMemoryPoolFactory>();
+
+public class CustomMemoryPoolFactory : IMemoryPoolFactory<byte>
+{
+    public MemoryPool<byte> Create()
+    {
+        // Return a custom MemoryPool implementation
+        // or the default, as is shown here.
+        return MemoryPool<byte>.Shared;
+    }
+}
+```
+When you're using a memory pool, be aware of the pool's MaxBufferSize.
+
+## Additional resources
+- Enable Windows Authentication with HTTP.sys
+- HTTP Server API
+- aspnet/HttpSysServer GitHub repository (source code)
+- The host
+- Troubleshoot and debug ASP.NET Core projects
+HTTP.sys is a web server for ASP.NET Core that only runs on Windows. HTTP.sys is an alternative to Kestrel server and offers some features that Kestrel doesn't provide.
+Important
+HTTP.sys isn't compatible with the ASP.NET Core Module and can't be used with IIS or IIS Express.
+HTTP.sys supports the following features:
+- Windows Authentication
+- Port sharing
+- HTTPS with SNI
+- HTTP/2 over TLS (Windows 10 or later)
+- Direct file transmission
+- Response caching
+- WebSockets (Windows 8 or later)
+Supported Windows versions:
+- Windows 7 or later
+- Windows Server 2008 R2 or later
+View or download sample code (how to download)
+
+## When to use HTTP.sys
+HTTP.sys is useful for deployments where:
+There's a need to expose the server directly to the Internet without using IIS.
+An internal deployment requires a feature not available in Kestrel. For more information, see Kestrel vs. HTTP.sys
+HTTP.sys is mature technology that protects against many types of attacks and provides the robustness, security, and scalability of a full-featured web server. IIS itself runs as an HTTP listener on top of HTTP.sys.
+
+## HTTP/2 support
+HTTP/2 is enabled for ASP.NET Core apps when the following base requirements are met:
+- Windows Server 2016/Windows 10 or later
+- Application-Layer Protocol Negotiation (ALPN) connection
+- TLS 1.2 or later connection
+If an HTTP/2 connection is established, HttpRequest.Protocol reports HTTP/2.
+HTTP/2 is enabled by default. If an HTTP/2 connection isn't established, the connection falls back to HTTP/1.1. In a future release of Windows, HTTP/2 configuration flags will be available, including the ability to disable HTTP/2 with HTTP.sys.
+
+## HTTP/3 support
+HTTP/3 is enabled for ASP.NET Core apps when the following base requirements are met:
+- Windows Server 2022/Windows 11 or later
+- An https url binding is used.
+- The EnableHttp3 registry key is set.
+The preceding Windows 11 Build versions may require the use of a Windows Insider build.
+HTTP/3 is discovered as an upgrade from HTTP/1.1 or HTTP/2 via the alt-svc header. That means the first request will normally use HTTP/1.1 or HTTP/2 before switching to HTTP/3. Http.Sys doesn't automatically add the alt-svc header, it must be added by the application. The following code is a middleware example that adds the alt-svc response header.
+
+CODE EXAMPLE
+LANGUAGE: csharp
+```
+app.Use((context, next) =>
+{
+    context.Response.Headers.AltSvc = "h3=\":443\"";
+    return next(context);
+});
+```
+Place the preceding code early in the request pipeline.
+Http.Sys also supports sending an AltSvc HTTP/2 protocol message rather than a response header to notify the client that HTTP/3 is available. See the EnableAltSvc registry key. This requires netsh sslcert bindings that use host names rather than IP addresses.
+
+## Kernel mode authentication with Kerberos
+HTTP.sys delegates to kernel mode authentication with the Kerberos authentication protocol. User mode authentication isn't supported with Kerberos and HTTP.sys. The machine account must be used to decrypt the Kerberos token/ticket that's obtained from Active Directory and forwarded by the client to the server to authenticate the user. Register the Service Principal Name (SPN) for the host, not the user of the app.
+
+## How to use HTTP.sys
+
+### Configure the ASP.NET Core app to use HTTP.sys
+Call the UseHttpSys extension method when building the host, specifying any required HttpSysOptions. The following example sets options to their default values:
+
+CODE EXAMPLE
+LANGUAGE: csharp
+```
+public static IHostBuilder CreateHostBuilder(string[] args) =>
+    Host.CreateDefaultBuilder(args)
+        .ConfigureWebHostDefaults(webBuilder =>
+        {
+            webBuilder.UseHttpSys(options =>
+            {
+                options.AllowSynchronousIO = false;
+                options.Authentication.Schemes = AuthenticationSchemes.None;
+                options.Authentication.AllowAnonymous = true;
+                options.MaxConnections = null;
+                options.MaxRequestBodySize = 30000000;
+                options.UrlPrefixes.Add("http://localhost:5005");
+            });
+            webBuilder.UseStartup<Startup>();
+        });
+```
+Additional HTTP.sys configuration is handled through registry settings.
+For more information about HTTP.sys options, see HttpSysOptions.
+MaxRequestBodySize
+The maximum allowed size of any request body in bytes. When set to null, the maximum request body size is unlimited. This limit has no effect on upgraded connections, which are always unlimited.
+The recommended method to override the limit in an ASP.NET Core MVC app for a single IActionResult is to use the RequestSizeLimitAttribute attribute on an action method:
+
+CODE EXAMPLE
+LANGUAGE: csharp
+```
+[RequestSizeLimit(100000000)]
+public IActionResult MyActionMethod()
+```
+An exception is thrown if the app attempts to configure the limit on a request after the app has started reading the request. An IsReadOnly property can be used to indicate if the MaxRequestBodySize property is in a read-only state, meaning it's too late to configure the limit.
+If the app should override MaxRequestBodySize per-request, use the IHttpMaxRequestBodySizeFeature:
+
+CODE EXAMPLE
+LANGUAGE: csharp
+```
+public void Configure(IApplicationBuilder app, IWebHostEnvironment env,
+    ILogger<Startup> logger, IServer server)
+{
+    app.Use(async (context, next) =>
+    {
+        context.Features.Get<IHttpMaxRequestBodySizeFeature>()
+            .MaxRequestBodySize = 10 * 1024;
+
+        var serverAddressesFeature =
+            app.ServerFeatures.Get<IServerAddressesFeature>();
+        var addresses = string.Join(", ", serverAddressesFeature?.Addresses);
+
+        logger.LogInformation("Addresses: {Addresses}", addresses);
+
+        await next.Invoke();
+    });
+
+    if (env.IsDevelopment())
+    {
+        app.UseDeveloperExceptionPage();
+    }
+    else
+    {
+        app.UseExceptionHandler("/Error");
+    }
+
+    app.UseStaticFiles();
+    app.UseRouting();
+
+    app.UseEndpoints(endpoints =>
+    {
+        endpoints.MapRazorPages();
+    });
+}
+```
+If using Visual Studio, make sure the app isn't configured to run IIS or IIS Express.
+In Visual Studio, the default launch profile is for IIS Express. To run the project as a console app, manually change the selected profile, as shown in the following screenshot:
+
+### Configure Windows Server
+Determine the ports to open for the app and use Windows Firewall or the New-NetFirewallRule PowerShell cmdlet to open firewall ports to allow traffic to reach HTTP.sys. In the following commands and app configuration, port 443 is used.
+When deploying to an Azure VM, open the ports in the Network Security Group. In the following commands and app configuration, port 443 is used.
+Obtain and install X.509 certificates, if required.
+On Windows, create self-signed certificates using the New-SelfSignedCertificate PowerShell cmdlet. For an unsupported example, see UpdateIISExpressSSLForChrome.ps1.
+Install either self-signed or CA-signed certificates in the server's Local Machine > Personal store.
+If the app is a framework-dependent deployment, install .NET, .NET Framework, or both (if the app is a .NET app targeting the .NET Framework).
+- .NET: If the app requires .NET, obtain and run the .NET Runtime installer from .NET Downloads. Don't install the full SDK on the server.
+- .NET Framework: If the app requires .NET Framework, see the .NET Framework installation guide. Install the required .NET Framework. The installer for the latest .NET Framework is available from the .NET Downloads page.
+If the app is a self-contained deployment, the app includes the runtime in its deployment. No framework installation is required on the server.
+Configure URLs and ports in the app.
+By default, ASP.NET Core binds to http://localhost:5000. To configure URL prefixes and ports, options include:
+- UseUrls
+- urls command-line argument
+- ASPNETCORE_URLS environment variable
+- UrlPrefixes
+The following code example shows how to use UrlPrefixes with the server's local IP address 10.0.0.4 on port 443:
+
+CODE EXAMPLE
+LANGUAGE: csharp
+```
+public static IHostBuilder CreateHostBuilder(string[] args) =>
+    Host.CreateDefaultBuilder(args)
+        .ConfigureWebHostDefaults(webBuilder =>
+        {
+            webBuilder.UseHttpSys(options =>
+            {
+                options.UrlPrefixes.Add("https://10.0.0.4:443");
+            });
+            webBuilder.UseStartup<Startup>();
+        });
+```
+An advantage of UrlPrefixes is that an error message is generated immediately for improperly formatted prefixes.
+The settings in UrlPrefixes override UseUrls/urls/ASPNETCORE_URLS settings. Therefore, an advantage of UseUrls, urls, and the ASPNETCORE_URLS environment variable is that it's easier to switch between Kestrel and HTTP.sys.
+HTTP.sys uses the HTTP Server API UrlPrefix string formats.
+Warning
+Top-level wildcard bindings (http://*:80/ and http://+:80) should not be used. Top-level wildcard bindings create app security vulnerabilities. This applies to both strong and weak wildcards. Use explicit host names or IP addresses rather than wildcards. Subdomain wildcard binding (for example, *.mysub.com) isn't a security risk if you control the entire parent domain (as opposed to *.com, which is vulnerable). For more information, see RFC 9110: Section 7.2: Host and :authority.
+Preregister URL prefixes on the server.
+The built-in tool for configuring HTTP.sys is netsh.exe. netsh.exe is used to reserve URL prefixes and assign X.509 certificates. The tool requires administrator privileges.
+Use the netsh.exe tool to register URLs for the app:
+
+CODE EXAMPLE
+LANGUAGE: console
+```
+netsh http add urlacl url=<URL> user=<USER>
+```
+- <URL>: The fully qualified Uniform Resource Locator (URL). Don't use a wildcard binding. Use a valid hostname or local IP address. The URL must include a trailing slash.
+- <USER>: Specifies the user or user-group name.
+In the following example, the local IP address of the server is 10.0.0.4:
+
+CODE EXAMPLE
+LANGUAGE: console
+```
+netsh http add urlacl url=https://10.0.0.4:443/ user=Users
+```
+When a URL is registered, the tool responds with URL reservation successfully added.
+To delete a registered URL, use the delete urlacl command:
+
+CODE EXAMPLE
+LANGUAGE: console
+```
+netsh http delete urlacl url=<URL>
+```
+Register X.509 certificates on the server.
+Use the netsh.exe tool to register certificates for the app:
+
+CODE EXAMPLE
+LANGUAGE: console
+```
+netsh http add sslcert ipport=<IP>:<PORT> certhash=<THUMBPRINT> appid="{<GUID>}"
+```
+- <IP>: Specifies the local IP address for the binding. Don't use a wildcard binding. Use a valid IP address.
+- <PORT>: Specifies the port for the binding.
+- <THUMBPRINT>: The X.509 certificate thumbprint.
+- <GUID>: A developer-generated GUID to represent the app for informational purposes.
+For reference purposes, store the GUID in the app as a package tag:
+- In Visual Studio:
+- Open the app's project properties by right-clicking on the app in Solution Explorer and selecting Properties.
+- Select the Package tab.
+- Enter the GUID that you created in the Tags field.
+- When not using Visual Studio:
+Open the app's project file.
+Add a <PackageTags> property to a new or existing <PropertyGroup> with the GUID that you created:
+
+CODE EXAMPLE
+LANGUAGE: xml
+```
+<PropertyGroup>
+  <PackageTags>00001111-aaaa-2222-bbbb-3333cccc4444</PackageTags>
+</PropertyGroup>
+```
+In the following example:
+- The local IP address of the server is 10.0.0.4.
+- An online random GUID generator provides the appid value.
+
+CODE EXAMPLE
+LANGUAGE: console
+```
+netsh http add sslcert
+    ipport=10.0.0.4:443
+    certhash=b66ee04419d4ee37464ab8785ff02449980eae10
+    appid="{00001111-aaaa-2222-bbbb-3333cccc4444}"
+```
+When a certificate is registered, the tool responds with SSL Certificate successfully added.
+To delete a certificate registration, use the delete sslcert command:
+
+CODE EXAMPLE
+LANGUAGE: console
+```
+netsh http delete sslcert ipport=<IP>:<PORT>
+```
+Reference documentation for netsh.exe:
+- Netsh Commands for Hypertext Transfer Protocol (HTTP)
+- UrlPrefix Strings
+Run the app.
+Administrator privileges aren't required to run the app when binding to localhost using HTTP (not HTTPS) with a port number greater than 1024. For other configurations (for example, using a local IP address or binding to port 443), run the app with administrator privileges.
+The app responds at the server's public IP address. In this example, the server is reached from the Internet at its public IP address of 104.214.79.47.
+A development certificate is used in this example. The page loads securely after bypassing the browser's untrusted certificate warning.
+
+## Proxy server and load balancer scenarios
+For apps hosted by HTTP.sys that interact with requests from the Internet or a corporate network, additional configuration might be required when hosting behind proxy servers and load balancers. For more information, see Configure ASP.NET Core to work with proxy servers and load balancers.
+
+## Advanced HTTP/2 features to support gRPC
+Additional HTTP/2 features in HTTP.sys support gRPC, including support for response trailers and sending reset frames.
+Requirements to run gRPC with HTTP.sys:
+- Windows 11 Build 22000 or later, Windows Server 2022 Build 20348 or later.
+- TLS 1.2 or later connection.
+
+### Trailers
+HTTP Trailers are similar to HTTP Headers, except they are sent after the response body is sent. For IIS and HTTP.sys, only HTTP/2 response trailers are supported.
+
+CODE EXAMPLE
+LANGUAGE: csharp
+```
+if (httpContext.Response.SupportsTrailers())
+{
+    httpContext.Response.DeclareTrailer("trailername");
+
+    // Write body
+    httpContext.Response.WriteAsync("Hello world");
+
+    httpContext.Response.AppendTrailer("trailername", "TrailerValue");
+}
+```
+In the preceding example code:
+- SupportsTrailers ensures that trailers are supported for the response.
+- DeclareTrailer adds the given trailer name to the Trailer response header. Declaring a response's trailers is optional, but recommended. If DeclareTrailer is called, it must be before the response headers are sent.
+- AppendTrailer appends the trailer.
+
+### Reset
+Reset allows for the server to reset a HTTP/2 request with a specified error code. A reset request is considered aborted.
+
+CODE EXAMPLE
+LANGUAGE: csharp
+```
+var resetFeature = httpContext.Features.Get<IHttpResetFeature>();
+resetFeature.Reset(errorCode: 2);
+```
+Reset in the preceding code example specifies the INTERNAL_ERROR error code. For more information about HTTP/2 error codes, visit the HTTP/2 specification error code section.
+
+## Additional resources
+- Enable Windows Authentication with HTTP.sys
+- HTTP Server API
+- aspnet/HttpSysServer GitHub repository (source code)
+- The host
+- Troubleshoot and debug ASP.NET Core projects
+HTTP.sys is a web server for ASP.NET Core that only runs on Windows. HTTP.sys is an alternative to Kestrel server and offers some features that Kestrel doesn't provide.
+Important
+HTTP.sys isn't compatible with the ASP.NET Core Module and can't be used with IIS or IIS Express.
+HTTP.sys supports the following features:
+- Windows Authentication
+- Port sharing
+- HTTPS with SNI
+- HTTP/2 over TLS (Windows 10 or later)
+- Direct file transmission
+- Response caching
+- WebSockets (Windows 8 or later)
+Supported Windows versions:
+- Windows 7 or later
+- Windows Server 2008 R2 or later
+View or download sample code (how to download)
+
+## When to use HTTP.sys
+HTTP.sys is useful for deployments where:
+There's a need to expose the server directly to the Internet without using IIS.
+An internal deployment requires a feature not available in Kestrel. For more information, see Kestrel vs. HTTP.sys
+HTTP.sys is mature technology that protects against many types of attacks and provides the robustness, security, and scalability of a full-featured web server. IIS itself runs as an HTTP listener on top of HTTP.sys.
+
+## HTTP/2 support
+HTTP/2 is enabled for ASP.NET Core apps if the following base requirements are met:
+- Windows Server 2016/Windows 10 or later
+- Application-Layer Protocol Negotiation (ALPN) connection
+- TLS 1.2 or later connection
+If an HTTP/2 connection is established, HttpRequest.Protocol reports HTTP/2.
+HTTP/2 is enabled by default. If an HTTP/2 connection isn't established, the connection falls back to HTTP/1.1. In a future release of Windows, HTTP/2 configuration flags will be available, including the ability to disable HTTP/2 with HTTP.sys.
+
+## Kernel mode authentication with Kerberos
+HTTP.sys delegates to kernel mode authentication with the Kerberos authentication protocol. User mode authentication isn't supported with Kerberos and HTTP.sys. The machine account must be used to decrypt the Kerberos token/ticket that's obtained from Active Directory and forwarded by the client to the server to authenticate the user. Register the Service Principal Name (SPN) for the host, not the user of the app.
+
+## How to use HTTP.sys
+
+### Configure the ASP.NET Core app to use HTTP.sys
+Call the UseHttpSys extension method when building the host, specifying any required HttpSysOptions. The following example sets options to their default values:
+
+CODE EXAMPLE
+LANGUAGE: csharp
+```
+public static IHostBuilder CreateHostBuilder(string[] args) =>
+    Host.CreateDefaultBuilder(args)
+        .ConfigureWebHostDefaults(webBuilder =>
+        {
+            webBuilder.UseHttpSys(options =>
+            {
+                options.AllowSynchronousIO = false;
+                options.Authentication.Schemes = AuthenticationSchemes.None;
+                options.Authentication.AllowAnonymous = true;
+                options.MaxConnections = null;
+                options.MaxRequestBodySize = 30000000;
+                options.UrlPrefixes.Add("http://localhost:5005");
+            });
+            webBuilder.UseStartup<Startup>();
+        });
+```
+Additional HTTP.sys configuration is handled through registry settings.
+HTTP.sys options
+- TimeoutManager.DrainEntityBody: Time allowed for the HTTP Server API to drain the entity body on a Keep-Alive connection.
+- TimeoutManager.EntityBody: Time allowed for the request entity body to arrive.
+- TimeoutManager.HeaderWait: Time allowed for the HTTP Server API to parse the request header.
+- TimeoutManager.IdleConnection: Time allowed for an idle connection.
+- TimeoutManager.MinSendBytesPerSecond: The minimum send rate for the response.
+- TimeoutManager.RequestQueue: Time allowed for the request to remain in the request queue before the app picks it up.
+MaxRequestBodySize
+The maximum allowed size of any request body in bytes. When set to null, the maximum request body size is unlimited. This limit has no effect on upgraded connections, which are always unlimited.
+The recommended method to override the limit in an ASP.NET Core MVC app for a single IActionResult is to use the RequestSizeLimitAttribute attribute on an action method:
+
+CODE EXAMPLE
+LANGUAGE: csharp
+```
+[RequestSizeLimit(100000000)]
+public IActionResult MyActionMethod()
+```
+An exception is thrown if the app attempts to configure the limit on a request after the app has started reading the request. An IsReadOnly property can be used to indicate if the MaxRequestBodySize property is in a read-only state, meaning it's too late to configure the limit.
+If the app should override MaxRequestBodySize per-request, use the IHttpMaxRequestBodySizeFeature:
+
+CODE EXAMPLE
+LANGUAGE: csharp
+```
+public void Configure(IApplicationBuilder app, IWebHostEnvironment env,
+    ILogger<Startup> logger, IServer server)
+{
+    app.Use(async (context, next) =>
+    {
+        context.Features.Get<IHttpMaxRequestBodySizeFeature>()
+            .MaxRequestBodySize = 10 * 1024;
+
+        var serverAddressesFeature =
+            app.ServerFeatures.Get<IServerAddressesFeature>();
+        var addresses = string.Join(", ", serverAddressesFeature?.Addresses);
+
+        logger.LogInformation("Addresses: {Addresses}", addresses);
+
+        await next.Invoke();
+    });
+
+    if (env.IsDevelopment())
+    {
+        app.UseDeveloperExceptionPage();
+    }
+    else
+    {
+        app.UseExceptionHandler("/Error");
+    }
+
+    app.UseStaticFiles();
+    app.UseRouting();
+
+    app.UseEndpoints(endpoints =>
+    {
+        endpoints.MapRazorPages();
+    });
+}
+```
+If using Visual Studio, make sure the app isn't configured to run IIS or IIS Express.
+In Visual Studio, the default launch profile is for IIS Express. To run the project as a console app, manually change the selected profile, as shown in the following screen shot:
+
+### Configure Windows Server
+Determine the ports to open for the app and use Windows Firewall or the New-NetFirewallRule PowerShell cmdlet to open firewall ports to allow traffic to reach HTTP.sys. In the following commands and app configuration, port 443 is used.
+When deploying to an Azure VM, open the ports in the Network Security Group. In the following commands and app configuration, port 443 is used.
+Obtain and install X.509 certificates, if required.
+On Windows, create self-signed certificates using the New-SelfSignedCertificate PowerShell cmdlet. For an unsupported example, see UpdateIISExpressSSLForChrome.ps1.
+Install either self-signed or CA-signed certificates in the server's Local Machine > Personal store.
+If the app is a framework-dependent deployment, install .NET, .NET Framework, or both (if the app is a .NET app targeting the .NET Framework).
+- .NET: If the app requires .NET, obtain and run the .NET Runtime installer from .NET Downloads. Don't install the full SDK on the server.
+- .NET Framework: If the app requires .NET Framework, see the .NET Framework installation guide. Install the required .NET Framework. The installer for the latest .NET Framework is available from the .NET Downloads page.
+If the app is a self-contained deployment, the app includes the runtime in its deployment. No framework installation is required on the server.
+Configure URLs and ports in the app.
+By default, ASP.NET Core binds to http://localhost:5000. To configure URL prefixes and ports, options include:
+- UseUrls
+- urls command-line argument
+- ASPNETCORE_URLS environment variable
+- UrlPrefixes
+The following code example shows how to use UrlPrefixes with the server's local IP address 10.0.0.4 on port 443:
+
+CODE EXAMPLE
+LANGUAGE: csharp
+```
+public static IHostBuilder CreateHostBuilder(string[] args) =>
+    Host.CreateDefaultBuilder(args)
+        .ConfigureWebHostDefaults(webBuilder =>
+        {
+            webBuilder.UseHttpSys(options =>
+            {
+                options.UrlPrefixes.Add("https://10.0.0.4:443");
+            });
+            webBuilder.UseStartup<Startup>();
+        });
+```
+An advantage of UrlPrefixes is that an error message is generated immediately for improperly formatted prefixes.
+The settings in UrlPrefixes override UseUrls/urls/ASPNETCORE_URLS settings. Therefore, an advantage of UseUrls, urls, and the ASPNETCORE_URLS environment variable is that it's easier to switch between Kestrel and HTTP.sys.
+HTTP.sys uses the HTTP Server API UrlPrefix string formats.
+Warning
+Top-level wildcard bindings (http://*:80/ and http://+:80) should not be used. Top-level wildcard bindings create app security vulnerabilities. This applies to both strong and weak wildcards. Use explicit host names or IP addresses rather than wildcards. Subdomain wildcard binding (for example, *.mysub.com) isn't a security risk if you control the entire parent domain (as opposed to *.com, which is vulnerable). For more information, see RFC 9110: Section 7.2: Host and :authority.
+Preregister URL prefixes on the server.
+The built-in tool for configuring HTTP.sys is netsh.exe. netsh.exe is used to reserve URL prefixes and assign X.509 certificates. The tool requires administrator privileges.
+Use the netsh.exe tool to register URLs for the app:
+
+CODE EXAMPLE
+LANGUAGE: console
+```
+netsh http add urlacl url=<URL> user=<USER>
+```
+- <URL>: The fully qualified Uniform Resource Locator (URL). Don't use a wildcard binding. Use a valid hostname or local IP address. The URL must include a trailing slash.
+- <USER>: Specifies the user or user-group name.
+In the following example, the local IP address of the server is 10.0.0.4:
+
+CODE EXAMPLE
+LANGUAGE: console
+```
+netsh http add urlacl url=https://10.0.0.4:443/ user=Users
+```
+When a URL is registered, the tool responds with URL reservation successfully added.
+To delete a registered URL, use the delete urlacl command:
+
+CODE EXAMPLE
+LANGUAGE: console
+```
+netsh http delete urlacl url=<URL>
+```
+Register X.509 certificates on the server.
+Use the netsh.exe tool to register certificates for the app:
+
+CODE EXAMPLE
+LANGUAGE: console
+```
+netsh http add sslcert ipport=<IP>:<PORT> certhash=<THUMBPRINT> appid="{<GUID>}"
+```
+- <IP>: Specifies the local IP address for the binding. Don't use a wildcard binding. Use a valid IP address.
+- <PORT>: Specifies the port for the binding.
+- <THUMBPRINT>: The X.509 certificate thumbprint.
+- <GUID>: A developer-generated GUID to represent the app for informational purposes.
+For reference purposes, store the GUID in the app as a package tag:
+- In Visual Studio:
+- Open the app's project properties by right-clicking on the app in Solution Explorer and selecting Properties.
+- Select the Package tab.
+- Enter the GUID that you created in the Tags field.
+- When not using Visual Studio:
+Open the app's project file.
+Add a <PackageTags> property to a new or existing <PropertyGroup> with the GUID that you created:
+
+CODE EXAMPLE
+LANGUAGE: xml
+```
+<PropertyGroup>
+  <PackageTags>00001111-aaaa-2222-bbbb-3333cccc4444</PackageTags>
+</PropertyGroup>
+```
+In the following example:
+- The local IP address of the server is 10.0.0.4.
+- An online random GUID generator provides the appid value.
+
+CODE EXAMPLE
+LANGUAGE: console
+```
+netsh http add sslcert
+    ipport=10.0.0.4:443
+    certhash=b66ee04419d4ee37464ab8785ff02449980eae10
+    appid="{00001111-aaaa-2222-bbbb-3333cccc4444}"
+```
+When a certificate is registered, the tool responds with SSL Certificate successfully added.
+To delete a certificate registration, use the delete sslcert command:
+
+CODE EXAMPLE
+LANGUAGE: console
+```
+netsh http delete sslcert ipport=<IP>:<PORT>
+```
+Reference documentation for netsh.exe:
+- Netsh Commands for Hypertext Transfer Protocol (HTTP)
+- UrlPrefix Strings
+Run the app.
+Administrator privileges aren't required to run the app when binding to localhost using HTTP (not HTTPS) with a port number greater than 1024. For other configurations (for example, using a local IP address or binding to port 443), run the app with administrator privileges.
+The app responds at the server's public IP address. In this example, the server is reached from the Internet at its public IP address of 104.214.79.47.
+A development certificate is used in this example. The page loads securely after bypassing the browser's untrusted certificate warning.
+
+## Proxy server and load balancer scenarios
+For apps hosted by HTTP.sys that interact with requests from the Internet or a corporate network, additional configuration might be required when hosting behind proxy servers and load balancers. For more information, see Configure ASP.NET Core to work with proxy servers and load balancers.
+
+## Advanced HTTP/2 features to support gRPC
+Additional HTTP/2 features in HTTP.sys support gRPC, including support for response trailers and sending reset frames.
+Requirements to run gRPC with HTTP.sys:
+- Windows 10, OS Build 19041.508 or later
+- TLS 1.2 or later connection
+
+### Trailers
+HTTP Trailers are similar to HTTP Headers, except they are sent after the response body is sent. For IIS and HTTP.sys, only HTTP/2 response trailers are supported.
+
+CODE EXAMPLE
+LANGUAGE: csharp
+```
+if (httpContext.Response.SupportsTrailers())
+{
+    httpContext.Response.DeclareTrailer("trailername");
+
+    // Write body
+    httpContext.Response.WriteAsync("Hello world");
+
+    httpContext.Response.AppendTrailer("trailername", "TrailerValue");
+}
+```
+In the preceding example code:
+- SupportsTrailers ensures that trailers are supported for the response.
+- DeclareTrailer adds the given trailer name to the Trailer response header. Declaring a response's trailers is optional, but recommended. If DeclareTrailer is called, it must be before the response headers are sent.
+- AppendTrailer appends the trailer.
+
+### Reset
+Reset allows for the server to reset a HTTP/2 request with a specified error code. A reset request is considered aborted.
+
+CODE EXAMPLE
+LANGUAGE: csharp
+```
+var resetFeature = httpContext.Features.Get<IHttpResetFeature>();
+resetFeature.Reset(errorCode: 2);
+```
+Reset in the preceding code example specifies the INTERNAL_ERROR error code. For more information about HTTP/2 error codes, visit the HTTP/2 specification error code section.
+
+## Additional resources
+- Enable Windows Authentication with HTTP.sys
+- HTTP Server API
+- aspnet/HttpSysServer GitHub repository (source code)
+- The host
+- Troubleshoot and debug ASP.NET Core projects
+HTTP.sys is a web server for ASP.NET Core that only runs on Windows. HTTP.sys is an alternative to Kestrel server and offers some features that Kestrel doesn't provide.
+Important
+HTTP.sys isn't compatible with the ASP.NET Core Module and can't be used with IIS or IIS Express.
+HTTP.sys supports the following features:
+- Windows Authentication
+- Port sharing
+- HTTPS with SNI
+- HTTP/2 over TLS (Windows 10 or later)
+- HTTP/3 over TLS (Windows 11 or later)
+- Direct file transmission
+- Response caching
+- WebSockets (Windows 8 or later)
+- Customizable security descriptors
+Supported Windows versions:
+- Windows 7 or later
+- Windows Server 2008 R2 or later
+View or download sample code (how to download)
+
+## When to use HTTP.sys
+HTTP.sys is useful for deployments where:
+There's a need to expose the server directly to the Internet without using IIS.
+An internal deployment requires a feature not available in Kestrel. For more information, see Kestrel vs. HTTP.sys
+HTTP.sys is mature technology that protects against many types of attacks and provides the robustness, security, and scalability of a full-featured web server. IIS itself runs as an HTTP listener on top of HTTP.sys.
+
+## HTTP/2 support
+HTTP/2 is enabled for ASP.NET Core apps when the following base requirements are met:
+- Windows Server 2016/Windows 10 or later
+- Application-Layer Protocol Negotiation (ALPN) connection
+- TLS 1.2 or later connection
+If an HTTP/2 connection is established, HttpRequest.Protocol reports HTTP/2.
+HTTP/2 is enabled by default. If an HTTP/2 connection isn't established, the connection falls back to HTTP/1.1. In a future release of Windows, HTTP/2 configuration flags will be available, including the ability to disable HTTP/2 with HTTP.sys.
+
+## HTTP/3 support
+HTTP/3 is enabled for ASP.NET Core apps when the following base requirements are met:
+- Windows Server 2022/Windows 11 or later
+- An https url binding is used.
+- The EnableHttp3 registry key is set.
+The preceding Windows 11 Build versions may require the use of a Windows Insider build.
+HTTP/3 is discovered as an upgrade from HTTP/1.1 or HTTP/2 via the alt-svc header. That means the first request will normally use HTTP/1.1 or HTTP/2 before switching to HTTP/3. Http.Sys doesn't automatically add the alt-svc header, it must be added by the application. The following code is a middleware example that adds the alt-svc response header.
+
+CODE EXAMPLE
+LANGUAGE: csharp
+```
+app.Use((context, next) =>
+{
+    context.Response.Headers.AltSvc = "h3=\":443\"";
+    return next(context);
+});
+```
+Place the preceding code early in the request pipeline.
+Http.Sys also supports sending an AltSvc HTTP/2 protocol message rather than a response header to notify the client that HTTP/3 is available. See the EnableAltSvc registry key. This requires netsh sslcert bindings that use host names rather than IP addresses.
+
+## Kernel mode authentication with Kerberos
+HTTP.sys delegates to kernel mode authentication with the Kerberos authentication protocol. User mode authentication isn't supported with Kerberos and HTTP.sys. The machine account must be used to decrypt the Kerberos token/ticket that's obtained from Active Directory and forwarded by the client to the server to authenticate the user. Register the Service Principal Name (SPN) for the host, not the user of the app.
+
+### Enable channel binding token (CBT) hardening
+Channel binding tokens (CBT) tie Windows authentication to the underlying TLS channel, which helps mitigate NTLM relay and man-in-the-middle attacks. For HTTPS endpoints that use Windows authentication with HTTP.sys, you can opt in to CBT hardening by setting the Microsoft.AspNetCore.Server.HttpSys.EnableCBTHardening AppContext switch to true.
+Enable the switch in your project's runtimeconfig.template.json file:
+
+CODE EXAMPLE
+LANGUAGE: json
+```
+{
+  "configProperties": {
+    "Microsoft.AspNetCore.Server.HttpSys.EnableCBTHardening": true
+  }
+}
+```
+Or set the switch programmatically before building the host in Program.cs:
+
+CODE EXAMPLE
+LANGUAGE: csharp
+```
+AppContext.SetSwitch("Microsoft.AspNetCore.Server.HttpSys.EnableCBTHardening", true);
+```
+Warning
+CBT hardening is off by default. Enabling it can cause Windows authentication to fail for clients or proxies that don't support channel binding. Test thoroughly in your environment before enabling in production.
+
+### Support for kernel-mode response buffering
+In some scenarios, high volumes of small writes with high latency can cause significant performance impact to HTTP.sys. This impact is due to the lack of a Pipe buffer in the HTTP.sys implementation. To improve performance in these scenarios, support for response buffering is included in HTTP.sys. Enable buffering by setting HttpSysOptions.EnableKernelResponseBuffering to true. Response buffering should be enabled by an app that does synchronous I/O, or asynchronous I/O with no more than one outstanding write at a time. In these scenarios, response buffering can significantly improve throughput over high-latency connections.
+Apps that use asynchronous I/O and that may have more than one write outstanding at a time should not use this flag. Enabling this flag can result in higher CPU and memory usage by HTTP.Sys.
+
+## How to use HTTP.sys
+
+### Configure the ASP.NET Core app to use HTTP.sys
+Call the UseHttpSys extension method when building the host, specifying any required HttpSysOptions. The following example sets options to their default values:
+
+CODE EXAMPLE
+LANGUAGE: csharp
+```
+using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Hosting.Server.Features;
+using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.Server.HttpSys;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.WebHost.UseHttpSys(options =>
+{
+    options.AllowSynchronousIO = false;
+    options.Authentication.Schemes = AuthenticationSchemes.None;
+    options.Authentication.AllowAnonymous = true;
+    options.MaxConnections = null;
+    options.MaxRequestBodySize = 30_000_000;
+    options.UrlPrefixes.Add("http://localhost:5005");
+});
+
+builder.Services.AddRazorPages();
+
+var app = builder.Build();
+```
+Additional HTTP.sys configuration is handled through registry settings.
+For more information about HTTP.sys options, see HttpSysOptions.
+MaxRequestBodySize
+The maximum allowed size of any request body in bytes. When set to null, the maximum request body size is unlimited. This limit has no effect on upgraded connections, which are always unlimited.
+The recommended method to override the limit in an ASP.NET Core MVC app for a single IActionResult is to use the RequestSizeLimitAttribute attribute on an action method:
+
+CODE EXAMPLE
+LANGUAGE: csharp
+```
+[RequestSizeLimit(100000000)]
+public IActionResult MyActionMethod()
+```
+An exception is thrown if the app attempts to configure the limit on a request after the app has started reading the request. An IsReadOnly property can be used to indicate if the MaxRequestBodySize property is in a read-only state, meaning it's too late to configure the limit.
+If the app should override MaxRequestBodySize per-request, use the IHttpMaxRequestBodySizeFeature:
+
+CODE EXAMPLE
+LANGUAGE: csharp
+```
+app.Use((context, next) =>
+{
+    context.Features.GetRequiredFeature<IHttpMaxRequestBodySizeFeature>()
+                                             .MaxRequestBodySize = 10 * 1024;
+
+    var server = context.RequestServices
+        .GetRequiredService<IServer>();
+    var serverAddressesFeature = server.Features
+                                 .GetRequiredFeature<IServerAddressesFeature>();
+
+    var addresses = string.Join(", ", serverAddressesFeature.Addresses);
+
+    var loggerFactory = context.RequestServices
+        .GetRequiredService<ILoggerFactory>();
+    var logger = loggerFactory.CreateLogger("Sample");
+
+    logger.LogInformation("Addresses: {addresses}", addresses);
+
+    return next(context);
+});
+```
+If using Visual Studio, make sure the app isn't configured to run IIS or IIS Express.
+In Visual Studio, the default launch profile is for IIS Express. To run the project as a console app, manually change the selected profile, as shown in the following screenshot:
+
+### Configure Windows Server
+Determine the ports to open for the app and use Windows Firewall or the New-NetFirewallRule PowerShell cmdlet to open firewall ports to allow traffic to reach HTTP.sys. In the following commands and app configuration, port 443 is used.
+When deploying to an Azure VM, open the ports in the Network Security Group. In the following commands and app configuration, port 443 is used.
+Obtain and install X.509 certificates, if required.
+On Windows, create self-signed certificates using the New-SelfSignedCertificate PowerShell cmdlet. For an unsupported example, see UpdateIISExpressSSLForChrome.ps1.
+Install either self-signed or CA-signed certificates in the server's Local Machine > Personal store.
+If the app is a framework-dependent deployment, install .NET, .NET Framework, or both (if the app is a .NET app targeting the .NET Framework).
+- .NET: If the app requires .NET, obtain and run the .NET Runtime installer from .NET Downloads. Don't install the full SDK on the server.
+- .NET Framework: If the app requires .NET Framework, see the .NET Framework installation guide. Install the required .NET Framework. The installer for the latest .NET Framework is available from the .NET Downloads page.
+If the app is a self-contained deployment, the app includes the runtime in its deployment. No framework installation is required on the server.
+Configure URLs and ports in the app.
+By default, ASP.NET Core binds to http://localhost:5000. To configure URL prefixes and ports, options include:
+- UseUrls
+- urls command-line argument
+- ASPNETCORE_URLS environment variable
+- UrlPrefixes
+The following code example shows how to use UrlPrefixes with the server's local IP address 10.0.0.4 on port 443:
+
+CODE EXAMPLE
+LANGUAGE: csharp
+```
+var builder = WebApplication.CreateBuilder(args);
+
+builder.WebHost.UseHttpSys(options =>
+{
+    options.UrlPrefixes.Add("https://10.0.0.4:443");
+});
+
+builder.Services.AddRazorPages();
+
+var app = builder.Build();
+```
+An advantage of UrlPrefixes is that an error message is generated immediately for improperly formatted prefixes.
+The settings in UrlPrefixes override UseUrls/urls/ASPNETCORE_URLS settings. Therefore, an advantage of UseUrls, urls, and the ASPNETCORE_URLS environment variable is that it's easier to switch between Kestrel and HTTP.sys.
+HTTP.sys recognizes two types of wild cards in URL prefixes:
+- * is a weak binding, also known as a fallback binding. If the URL prefix is http://*:5000, and something else is bound to port 5000, this binding won't be used.
+- + is a strong binding. If the URL prefix is http://+:5000, this binding will be used before other port 5000 bindings.
+For more information, see UrlPrefix Strings.
+Warning
+Top-level wildcard bindings (http://*:80/ and http://+:80) should not be used. Top-level wildcard bindings create app security vulnerabilities. This applies to both strong and weak wildcards. Use explicit host names or IP addresses rather than wildcards. Subdomain wildcard binding (for example, *.mysub.com) isn't a security risk if you control the entire parent domain (as opposed to *.com, which is vulnerable). For more information, see RFC 9110: Section 7.2: Host and :authority.
+Most configurations for apps and containers define only a port for listening, like port 80, without specifying other constraints like the host or path. HTTP_PORTS and HTTPS_PORTS are config keys that specify the listening ports for the Kestrel and HTTP.sys servers. You can specify the keys as environment variables defined with the DOTNET_ or ASPNETCORE_ prefixes, or set them directly through any other config input, such as the appsettings.json file. Each configuration is a semicolon-delimited list of port values, as shown in the following example:
+
+CODE EXAMPLE
+LANGUAGE: json
+```
+ASPNETCORE_HTTP_PORTS=80;8080
+ASPNETCORE_HTTPS_PORTS=443;8081
+```
+The configuration in the example is shorthand for the following specification, which defines the scheme (HTTP or HTTPS) and any host or IP:
+
+CODE EXAMPLE
+LANGUAGE: json
+```
+ASPNETCORE_URLS=http://*:80/;http://*:8080/;https://*:443/;https://*:8081/
+```
+The HTTP_PORTS and HTTPS_PORTS configuration keys are lower priority. If other URLs or values are set directly in code, they can override the configuration keys. Configure certificates separately using server-specific mechanics for HTTPS.
+Note
+Don't confuse the HTTPS_PORTS configuration key and ASPNETCORE_HTTPS_PORTS environment variable, which set the ports for Kestrel/HTTP.sys endpoint configuration, with the HTTPS_PORT configuration key and ASPNETCORE_HTTPS_PORT environment variable, which set the port for HTTPS redirection middleware.
+These configuration keys are equivalent to top-level wildcard bindings. They're convenient for development and container scenarios, but avoid wildcards when running on a machine that may also host other services.
+Preregister URL prefixes on the server.
+The built-in tool for configuring HTTP.sys is netsh.exe. netsh.exe is used to reserve URL prefixes and assign X.509 certificates. The tool requires administrator privileges.
+Use the netsh.exe tool to register URLs for the app:
+
+CODE EXAMPLE
+LANGUAGE: console
+```
+netsh http add urlacl url=<URL> user=<USER>
+```
+- <URL>: The fully qualified Uniform Resource Locator (URL). Don't use a wildcard binding. Use a valid hostname or local IP address. The URL must include a trailing slash.
+- <USER>: Specifies the user or user-group name.
+In the following example, the local IP address of the server is 10.0.0.4:
+
+CODE EXAMPLE
+LANGUAGE: console
+```
+netsh http add urlacl url=https://10.0.0.4:443/ user=Users
+```
+When a URL is registered, the tool responds with URL reservation successfully added.
+To delete a registered URL, use the delete urlacl command:
+
+CODE EXAMPLE
+LANGUAGE: console
+```
+netsh http delete urlacl url=<URL>
+```
+Register X.509 certificates on the server.
+Use the netsh.exe tool to register certificates for the app:
+
+CODE EXAMPLE
+LANGUAGE: console
+```
+netsh http add sslcert ipport=<IP>:<PORT> certhash=<THUMBPRINT> appid="{<GUID>}"
+```
+- <IP>: Specifies the local IP address for the binding. Don't use a wildcard binding. Use a valid IP address.
+- <PORT>: Specifies the port for the binding.
+- <THUMBPRINT>: The X.509 certificate thumbprint.
+- <GUID>: A developer-generated GUID to represent the app for informational purposes.
+For reference purposes, store the GUID in the app as a package tag:
+- In Visual Studio:
+- Open the app's project properties by right-clicking on the app in Solution Explorer and selecting Properties.
+- Select the Package tab.
+- Enter the GUID that you created in the Tags field.
+- When not using Visual Studio:
+Open the app's project file.
+Add a <PackageTags> property to a new or existing <PropertyGroup> with the GUID that you created:
+
+CODE EXAMPLE
+LANGUAGE: xml
+```
+<PropertyGroup>
+  <PackageTags>00001111-aaaa-2222-bbbb-3333cccc4444</PackageTags>
+</PropertyGroup>
+```
+In the following example:
+- The local IP address of the server is 10.0.0.4.
+- An online random GUID generator provides the appid value.
+
+CODE EXAMPLE
+LANGUAGE: console
+```
+netsh http add sslcert
+    ipport=10.0.0.4:443
+    certhash=b66ee04419d4ee37464ab8785ff02449980eae10
+    appid="{00001111-aaaa-2222-bbbb-3333cccc4444}"
+```
+When a certificate is registered, the tool responds with SSL Certificate successfully added.
+To delete a certificate registration, use the delete sslcert command:
+
+CODE EXAMPLE
+LANGUAGE: console
+```
+netsh http delete sslcert ipport=<IP>:<PORT>
+```
+Reference documentation for netsh.exe:
+- Netsh Commands for Hypertext Transfer Protocol (HTTP)
+- UrlPrefix Strings
+Run the app.
+Administrator privileges aren't required to run the app when binding to localhost using HTTP (not HTTPS) with a port number greater than 1024. For other configurations (for example, using a local IP address or binding to port 443), run the app with administrator privileges.
+The app responds at the server's public IP address. In this example, the server is reached from the Internet at its public IP address of 104.214.79.47.
+A development certificate is used in this example. The page loads securely after bypassing the browser's untrusted certificate warning.
+
+## Proxy server and load balancer scenarios
+For apps hosted by HTTP.sys that interact with requests from the Internet or a corporate network, additional configuration might be required when hosting behind proxy servers and load balancers. For more information, see Configure ASP.NET Core to work with proxy servers and load balancers.
+
+## Get detailed timing information with IHttpSysRequestTimingFeature
+IHttpSysRequestTimingFeature provides detailed timing information for requests:
+- Timestamps are obtained using QueryPerformanceCounter.
+- The timestamp frequency can be obtained via QueryPerformanceFrequency.
+- The index of the timing can be cast to HttpSysRequestTimingType to know what the timing represents.
+- The value may be 0 if the timing isn't available for the current request.
+- Requires Windows 10 version 2004, Windows Server 2022, or later.
+
+CODE EXAMPLE
+LANGUAGE: csharp
+```
+using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.Server.HttpSys;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.WebHost.UseHttpSys();
+
+var app = builder.Build();
+
+app.Use((context, next) =>
+{
+    var feature = context.Features.GetRequiredFeature<IHttpSysRequestTimingFeature>();
+
+    var loggerFactory = context.RequestServices.GetRequiredService<ILoggerFactory>();
+    var logger = loggerFactory.CreateLogger("Sample");
+
+    var timestamps = feature.Timestamps;
+
+    for (var i = 0; i < timestamps.Length; i++)
+    {
+        var timestamp = timestamps[i];
+        var timingType = (HttpSysRequestTimingType)i;
+
+        logger.LogInformation("Timestamp {timingType}: {timestamp}",
+                                          timingType, timestamp);
+    }
+
+    return next(context);
+});
+
+app.MapGet("/", () => Results.Ok());
+
+app.Run();
+```
+IHttpSysRequestTimingFeature.TryGetTimestamp retrieves the timestamp for the provided timing type:
+
+CODE EXAMPLE
+LANGUAGE: csharp
+```
+using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.Server.HttpSys;
+var builder = WebApplication.CreateBuilder(args);
+
+builder.WebHost.UseHttpSys();
+
+var app = builder.Build();
+
+app.Use((context, next) =>
+{
+    var feature = context.Features.GetRequiredFeature<IHttpSysRequestTimingFeature>();
+
+    var loggerFactory = context.RequestServices.GetRequiredService<ILoggerFactory>();
+    var logger = loggerFactory.CreateLogger("Sample");
+
+    var timingType = HttpSysRequestTimingType.RequestRoutingEnd;
+
+    if (feature.TryGetTimestamp(timingType, out var timestamp))
+    {
+        logger.LogInformation("Timestamp {timingType}: {timestamp}",
+                                          timingType, timestamp);
+    }
+    else
+    {
+        logger.LogInformation("Timestamp {timingType}: not available for the "
+                                           + "current request",    timingType);
+    }
+
+    return next(context);
+});
+
+app.MapGet("/", () => Results.Ok());
+
+app.Run();
+```
+[IHttpSysRequestTimingFeature.TryGetElapsedTime](/dotnet/api/microsoft.aspnetcore.server.httpsys.ihttpsysrequesttimingfeature.trygetelapsedtime yields the elapsed time between two specified timings:
+
+CODE EXAMPLE
+LANGUAGE: csharp
+```
+using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.Server.HttpSys;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.WebHost.UseHttpSys();
+
+var app = builder.Build();
+
+app.Use((context, next) =>
+{
+    var feature = context.Features.GetRequiredFeature<IHttpSysRequestTimingFeature>();
+
+    var loggerFactory = context.RequestServices.GetRequiredService<ILoggerFactory>();
+    var logger = loggerFactory.CreateLogger("Sample");
+
+    var startingTimingType = HttpSysRequestTimingType.RequestRoutingStart;
+    var endingTimingType = HttpSysRequestTimingType.RequestRoutingEnd;
+
+    if (feature.TryGetElapsedTime(startingTimingType, endingTimingType, out var elapsed))
+    {
+        logger.LogInformation(
+            "Elapsed time {startingTimingType} to {endingTimingType}: {elapsed}",
+            startingTimingType,
+            endingTimingType,
+            elapsed);
+    }
+    else
+    {
+        logger.LogInformation(
+            "Elapsed time {startingTimingType} to {endingTimingType}:"
+            + " not available for the current request.",
+            startingTimingType,
+            endingTimingType);
+    }
+
+    return next(context);
+});
+
+app.MapGet("/", () => Results.Ok());
+
+app.Run();
+```
+
+## Advanced HTTP/2 features to support gRPC
+Additional HTTP/2 features in HTTP.sys support gRPC, including support for response trailers and sending reset frames.
+Requirements to run gRPC with HTTP.sys:
+- Windows 11 Build 22000 or later, Windows Server 2022 Build 20348 or later.
+- TLS 1.2 or later connection.
+
+### Trailers
+HTTP Trailers are similar to HTTP Headers, except they are sent after the response body is sent. For IIS and HTTP.sys, only HTTP/2 response trailers are supported.
+
+CODE EXAMPLE
+LANGUAGE: csharp
+```
+if (httpContext.Response.SupportsTrailers())
+{
+    httpContext.Response.DeclareTrailer("trailername");
+
+    // Write body
+    httpContext.Response.WriteAsync("Hello world");
+
+    httpContext.Response.AppendTrailer("trailername", "TrailerValue");
+}
+```
+In the preceding example code:
+- SupportsTrailers ensures that trailers are supported for the response.
+- DeclareTrailer adds the given trailer name to the Trailer response header. Declaring a response's trailers is optional, but recommended. If DeclareTrailer is called, it must be before the response headers are sent.
+- AppendTrailer appends the trailer.
+
+### Reset
+Reset allows for the server to reset a HTTP/2 request with a specified error code. A reset request is considered aborted.
+
+CODE EXAMPLE
+LANGUAGE: csharp
+```
+var resetFeature = httpContext.Features.Get<IHttpResetFeature>();
+resetFeature.Reset(errorCode: 2);
+```
+Reset in the preceding code example specifies the INTERNAL_ERROR error code. For more information about HTTP/2 error codes, visit the HTTP/2 specification error code section.
+
+## Tracing
+For information about how to get traces from HTTP.sys, see HTTP.sys Manageability Scenarios.
+
+## Additional resources
+- Enable Windows Authentication with HTTP.sys
+- HTTP Server API
+- aspnet/HttpSysServer GitHub repository (source code)
+- The host
+- Troubleshoot and debug ASP.NET Core projects
+ASP.NET Core
+
+## Feedback
+Was this page helpful?
+Need help with this topic?
+Want to try using Ask Learn to clarify or guide you through this topic?
+
+## Additional resources
+- Last updated on 2026-07-29

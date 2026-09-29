@@ -1,0 +1,13 @@
+# Input widgets
+SOURCE: https://docs.flutter.dev/ui/widgets/input
+Flutter 3.47 is here! Read the blog post.
+
+# Input widgets
+A catalog of Flutter's input widgets. Take user input in addition to input widgets in Material components and Cupertino.
+Take user input in addition to input widgets in Material components and Cupertino.
+A widget for helping the user make a selection by entering some text and choosing from among a list of options.
+An optional container for grouping together multiple form field widgets (e.g. TextField widgets).
+A single form field. This widget maintains the current state of the form field, so that updates and validation errors are visually reflected in the...
+A widget that calls a callback whenever the user presses or releases a key on a keyboard.
+Find more widgets in the widget catalog.
+Unless stated otherwise, the documentation on this site reflects Flutter 3.47. Page last updated on 2026-05-31. Report an issue.

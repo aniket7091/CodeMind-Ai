@@ -1,0 +1,142 @@
+# Host and deploy ASP.NET Core | Microsoft Learn
+SOURCE: https://learn.microsoft.com/en-us/aspnet/core/host-and-deploy/
+Note
+Access to this page requires authorization. You can try signing in or changing directories.
+Access to this page requires authorization. You can try changing directories.
+
+# Host and deploy ASP.NET Core
+Note
+This isn't the latest version of this article. For the current release, see the .NET 10 version of this article.
+Warning
+This version of ASP.NET Core is no longer supported. For more information, see the .NET and .NET Core Support Policy. For the current release, see the .NET 10 version of this article.
+In general, to deploy an ASP.NET Core app to a hosting environment:
+- Deploy the published app to a folder on the hosting server.
+- Set up a process manager that starts the app when requests arrive and restarts the app after it crashes or the server reboots.
+- For configuration of a reverse proxy, set up a reverse proxy to forward requests to the app.
+For Blazor host and deploy guidance, which adds to or supersedes the guidance in this node, see Host and deploy ASP.NET Core Blazor.
+
+## Publish to a folder
+The dotnet publish command compiles app code and copies the files required to run the app into a publish folder. When deploying from Visual Studio, the dotnet publish step occurs automatically before the files are copied to the deployment destination.
+
+### Run the published app locally
+To run the published app locally, run dotnet <ApplicationName>.dll from the publish folder.
+
+## Publish settings files
+*.json files are published by default. To publish other settings files, specify them in an <ItemGroup><Content Include= ... /> element in the project file. The following example publishes XML files:
+
+CODE EXAMPLE
+LANGUAGE: xml
+```
+<ItemGroup>
+  <Content Include="**\*.xml" Exclude="bin\**\*;obj\**\*"
+    CopyToOutputDirectory="PreserveNewest" />
+</ItemGroup>
+```
+
+### Folder contents
+The publish folder contains one or more app assembly files, dependencies, and optionally the .NET runtime.
+A .NET Core app can be published as self-contained deployment or framework-dependent deployment. If the app is self-contained, the assembly files that contain the .NET runtime are included in the publish folder. If the app is framework-dependent, the .NET runtime files aren't included because the app has a reference to a version of .NET that's installed on the server. The default deployment model is framework-dependent. For more information, see .NET Core application deployment.
+In addition to .exe and .dll files, the publish folder for an ASP.NET Core app typically contains configuration files, static assets, and MVC views. For more information, see ASP.NET Core directory structure.
+
+## Set up a process manager
+An ASP.NET Core app is a console app that must be started when a server boots and restarted if it crashes. To automate starts and restarts, a process manager is required. The most common process managers for ASP.NET Core are:
+- Linux
+- Nginx
+- Windows
+- IIS
+- Windows Service
+
+## Set up a reverse proxy
+If the app uses the Kestrel server, Nginx, or IIS can be used as a reverse proxy server. A reverse proxy server receives HTTP requests from the Internet and forwards them to Kestrel.
+Either configuration—with or without a reverse proxy server—is a supported hosting configuration. For more information, see When to use Kestrel with a reverse proxy.
+Either configuration—with or without a reverse proxy server—is a supported hosting configuration. For more information, see When to use Kestrel with a reverse proxy.
+
+## Proxy server and load balancer scenarios
+Additional configuration might be required for apps hosted behind proxy servers and load balancers. Without additional configuration, an app might not have access to the scheme (HTTP/HTTPS) and the remote IP address where a request originated. For more information, see Configure ASP.NET Core to work with proxy servers and load balancers.
+
+## Use Visual Studio and MSBuild to automate deployments
+Deployment often requires additional tasks besides copying the output from dotnet publish to a server. For example, extra files might be required or excluded from the publish folder. Visual Studio uses MSBuild for web deployment, and MSBuild can be customized to do many other tasks during deployment. For more information, see Visual Studio publish profiles (.pubxml) for ASP.NET Core app deployment and the Using MSBuild and Team Foundation Build book.
+By using the Publish Web feature, apps can be deployed directly from Visual Studio to the Azure App Service. Azure DevOps Services supports continuous deployment to Azure App Service. For more information, see DevOps for ASP.NET Core Developers.
+
+## Publish to Azure
+See Publish an ASP.NET Core app to Azure with Visual Studio for instructions on how to publish an app to Azure using Visual Studio. An additional example is provided by Create an ASP.NET Core web app in Azure.
+
+## Publish with MSDeploy on Windows
+See Visual Studio publish profiles (.pubxml) for ASP.NET Core app deployment for instructions on how to publish an app with a Visual Studio publish profile, including from a Windows command prompt using the dotnet msbuild command.
+
+## Internet Information Services (IIS)
+For deployments to Internet Information Services (IIS) with configuration provided by the web.config file, see the articles under Host ASP.NET Core on Windows with IIS.
+
+## Host in a web farm
+For information on configuration for hosting ASP.NET Core apps in a web farm environment (for example, deployment of multiple instances of your app for scalability), see Host ASP.NET Core in a web farm.
+
+## Host on Docker
+For more information, see Host ASP.NET Core in Docker containers.
+
+## Perform health checks
+Use health checks middleware to perform health checks on an app and its dependencies. For more information, see Health checks in ASP.NET Core.
+
+## Additional resources
+- .NET application publishing overview
+- Troubleshoot and debug ASP.NET Core projects
+- ASP.NET Hosting
+In general, to deploy an ASP.NET Core app to a hosting environment:
+- Deploy the published app to a folder on the hosting server.
+- Set up a process manager that starts the app when requests arrive and restarts the app after it crashes or the server reboots.
+- For configuration of a reverse proxy, set up a reverse proxy to forward requests to the app.
+
+## Publish to a folder
+The dotnet publish command compiles app code and copies the files required to run the app into a publish folder. When deploying from Visual Studio, the dotnet publish step occurs automatically before the files are copied to the deployment destination.
+
+### Folder contents
+The publish folder contains one or more app assembly files, dependencies, and optionally the .NET runtime.
+A .NET Core app can be published as self-contained deployment or framework-dependent deployment. If the app is self-contained, the assembly files that contain the .NET runtime are included in the publish folder. If the app is framework-dependent, the .NET runtime files aren't included because the app has a reference to a version of .NET that's installed on the server. The default deployment model is framework-dependent. For more information, see .NET Core application deployment.
+In addition to .exe and .dll files, the publish folder for an ASP.NET Core app typically contains configuration files, static assets, and MVC views. For more information, see ASP.NET Core directory structure.
+
+## Set up a process manager
+An ASP.NET Core app is a console app that must be started when a server boots and restarted if it crashes. To automate starts and restarts, a process manager is required. The most common process managers for ASP.NET Core are:
+- Linux
+- Nginx
+- Windows
+- IIS
+- Windows Service
+
+## Set up a reverse proxy
+If the app uses the Kestrel server, Nginx, or IIS can be used as a reverse proxy server. A reverse proxy server receives HTTP requests from the Internet and forwards them to Kestrel.
+Either configuration—with or without a reverse proxy server—is a supported hosting configuration. For more information, see When to use Kestrel with a reverse proxy.
+
+## Proxy server and load balancer scenarios
+Additional configuration might be required for apps hosted behind proxy servers and load balancers. Without additional configuration, an app might not have access to the scheme (HTTP/HTTPS) and the remote IP address where a request originated. For more information, see Configure ASP.NET Core to work with proxy servers and load balancers.
+
+## Use Visual Studio and MSBuild to automate deployments
+Deployment often requires additional tasks besides copying the output from dotnet publish to a server. For example, extra files might be required or excluded from the publish folder. Visual Studio uses MSBuild for web deployment, and MSBuild can be customized to do many other tasks during deployment. For more information, see Visual Studio publish profiles (.pubxml) for ASP.NET Core app deployment and the Using MSBuild and Team Foundation Build book.
+By using the Publish Web feature, apps can be deployed directly from Visual Studio to the Azure App Service. Azure DevOps Services supports continuous deployment to Azure App Service. For more information, see DevOps for ASP.NET Core Developers.
+
+## Publish to Azure
+See Publish an ASP.NET Core app to Azure with Visual Studio for instructions on how to publish an app to Azure using Visual Studio. An additional example is provided by Create an ASP.NET Core web app in Azure.
+
+## Publish with MSDeploy on Windows
+See Visual Studio publish profiles (.pubxml) for ASP.NET Core app deployment for instructions on how to publish an app with a Visual Studio publish profile, including from a Windows command prompt using the dotnet msbuild command.
+
+## Internet Information Services (IIS)
+For deployments to Internet Information Services (IIS) with configuration provided by the web.config file, see the articles under Host ASP.NET Core on Windows with IIS.
+
+## Host in a web farm
+For information on configuration for hosting ASP.NET Core apps in a web farm environment (for example, deployment of multiple instances of your app for scalability), see Host ASP.NET Core in a web farm.
+
+## Host on Docker
+For more information, see Host ASP.NET Core in Docker containers.
+
+## Additional resources
+- .NET application publishing overview
+- Troubleshoot and debug ASP.NET Core projects
+- ASP.NET Hosting
+ASP.NET Core
+
+## Feedback
+Was this page helpful?
+Need help with this topic?
+Want to try using Ask Learn to clarify or guide you through this topic?
+
+## Additional resources
+- Last updated on 2026-04-22

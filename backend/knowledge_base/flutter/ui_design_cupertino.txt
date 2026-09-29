@@ -1,0 +1,25 @@
+# Cupertino design for Flutter
+SOURCE: https://docs.flutter.dev/ui/design/cupertino
+Flutter 3.47 is here! Read the blog post.
+
+# Cupertino design for Flutter
+Learn about Cupertino design for Flutter.
+The Flutter Cupertino library is a collection of widgets that implement Apple's iOS design language for Flutter apps. The widgets have a similar look and feel to iOS, including rounded corners, gradients, and minimalistic design. They also include iOS interactions and animations.
+The following 15-minute video provides a high-level glimpse of the Cupertino package:
+Watch on YouTube in a new tab: "Flutter's Cupertino Package"
+To see some Cupertino widgets in action, the following videos from the Widget of the Week series cover a few of them.
+
+## More information
+To learn more about using the Cupertino package with Flutter, check out the following resources:
+- The (mostly visual) Cupertino widget catalog on doc.flutter.dev
+- The Cupertino library page in the API docs
+- The Cupertino API examples on the flutter/flutter repo. (Instructions) For example, to run CupertinoSwitch:
+
+CODE EXAMPLE
+LANGUAGE: console
+```
+cd path/to/flutter
+cd examples/api
+flutter run lib/cupertino/switch/cupertino_switch.0.dart
+```
+Unless stated otherwise, the documentation on this site reflects Flutter 3.47. Page last updated on 2026-07-31. View source or report an issue.

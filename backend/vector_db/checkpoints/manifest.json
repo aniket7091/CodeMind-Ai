@@ -1,0 +1,6 @@
+{
+  "fingerprint": "b642ec64cb787eef0c4c25359f609993ca30934481864bc417e44a28a8b74812",
+  "model": "all-MiniLM-L6-v2",
+  "batch_size": 128,
+  "normalize_embeddings": true
+}

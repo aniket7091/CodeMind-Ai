@@ -1,0 +1,12 @@
+# Accessibility widgets
+SOURCE: https://docs.flutter.dev/ui/widgets/accessibility
+Flutter 3.47 is here! Read the blog post.
+
+# Accessibility widgets
+A catalog of Flutter's accessibility widgets. Make your app accessible.
+Make your app accessible.
+A widget that drops all the semantics of its descendants. This can be used to hide subwidgets that would otherwise be reported but that would...
+A widget that merges the semantics of its descendants.
+A widget that annotates the widget tree with a description of the meaning of the widgets. Used by accessibility tools, search engines, and other semantic...
+Find more widgets in the widget catalog.
+Unless stated otherwise, the documentation on this site reflects Flutter 3.47. Page last updated on 2026-05-31. Report an issue.

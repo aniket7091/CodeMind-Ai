@@ -1,0 +1,33 @@
+# Scrolling
+SOURCE: https://docs.flutter.dev/ui/layout/scrolling
+Flutter 3.47 is here! Read the blog post.
+
+# Scrolling
+Overview of Flutter's scrolling support
+Flutter has many built-in widgets that automatically scroll and also offers a variety of widgets that you can customize to create specific scrolling behavior.
+
+## Basic scrolling
+Many Flutter widgets support scrolling out of the box and do most of the work for you. For example, SingleChildScrollView automatically scrolls its child when necessary. Other useful widgets include ListView and GridView. You can check out more of these widgets on the scrolling page of the Widget catalog.
+Watch on YouTube in a new tab: "Scrollbar | Flutter widget of the week"
+Watch on YouTube in a new tab: "ListView | Flutter widget of the week"
+
+### Infinite scrolling
+When you have a long list of items in your ListView or GridView (including an infinite list), you can build the items on demand as they scroll into view. This provides a much more performant scrolling experience. For more information, check out ListView.builder or GridView.builder.
+
+### Specialized scrollable widgets
+The following widgets provide more specific scrolling behavior.
+A video on using DraggableScrollableSheet:
+Watch on YouTube in a new tab: "DraggableScrollableSheet | Flutter widget of the week"
+Turn the scrollable area into a wheel with ListWheelScrollView!
+Watch on YouTube in a new tab: "ListWheelScrollView | Flutter widget of the week"
+
+## Fancy scrolling
+Perhaps you want to implement elastic scrolling, also called scroll bouncing. Or maybe you want to implement other dynamic scrolling effects, like parallax scrolling. Or perhaps you want a scrolling header with very specific behavior, such as shrinking or disappearing.
+You can achieve all this and more using the Flutter Sliver* classes. A sliver refers to a piece of the scrollable area. You can define and insert a sliver into a CustomScrollView to have finer-grained control over that area.
+For more information, check out Using slivers to achieve fancy scrolling and the Sliver classes.
+
+## Nested scrolling widgets
+How do you nest a scrolling widget inside another scrolling widget without hurting scrolling performance? Do you set the ShrinkWrap property to true, or do you use a sliver?
+Check out the "ShrinkWrap vs Slivers" video:
+Watch on YouTube in a new tab: "ShrinkWrap vs Slivers | Decoding Flutter"
+Unless stated otherwise, the documentation on this site reflects Flutter 3.47. Page last updated on 2026-05-05. View source or report an issue.

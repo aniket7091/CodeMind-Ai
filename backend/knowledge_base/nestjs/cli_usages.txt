@@ -1,0 +1,168 @@
+# Usage - CLI | NestJS - A progressive Node.js framework
+SOURCE: https://docs.nestjs.com/cli/usages
+
+### CLI command reference
+
+#### nest new#
+Creates a new (standard mode) Nest project.
+
+CODE EXAMPLE
+LANGUAGE: bash
+```
+$ nest new <name> [options]
+$ nest n <name> [options]
+```
+
+##### Description
+Creates and initializes a new Nest project. The command prompts for any information you don't pass as an option: the project name, the package manager, the module system (ESM or CommonJS), and whether to set up NestJS Observe.
+The command:
+- Creates a folder with the given <name>
+- Populates the folder with configuration files
+- Creates subfolders for source code (/src) and end-to-end tests (/test)
+- Populates the subfolders with default files for application components and tests
+
+##### Arguments
+
+##### Options
+
+#### nest generate#
+Generates and/or modifies files based on a schematic.
+
+CODE EXAMPLE
+LANGUAGE: bash
+```
+$ nest generate <schematic> <name> [options]
+$ nest g <schematic> <name> [options]
+```
+
+##### Arguments
+
+##### Schematics
+
+##### Options
+
+#### nest build#
+Compiles an application or workspace into an output folder.
+The build command is also responsible for:
+- mapping paths (if you use path aliases) via tsconfig-paths
+- annotating DTOs with OpenAPI decorators (if the @nestjs/swagger CLI plugin is enabled)
+- annotating DTOs with GraphQL decorators (if the @nestjs/graphql CLI plugin is enabled)
+
+CODE EXAMPLE
+LANGUAGE: bash
+```
+$ nest build [name...] [options]
+```
+
+##### Arguments
+
+##### Options
+
+#### nest start#
+Compiles and runs an application (or the default project in a workspace).
+
+CODE EXAMPLE
+LANGUAGE: bash
+```
+$ nest start [name] [options]
+```
+
+##### Arguments
+
+##### Options
+
+#### nest add#
+Imports a library that has been packaged as a nest library, running its install schematic.
+
+CODE EXAMPLE
+LANGUAGE: bash
+```
+$ nest add <name> [options]
+```
+
+##### Arguments
+
+##### Options
+
+#### nest upgrade#
+Upgrades an existing project to the latest NestJS major version.
+
+CODE EXAMPLE
+LANGUAGE: bash
+```
+$ nest upgrade [options]
+$ nest update [options]
+```
+
+##### Description
+Run from the root of a NestJS v11 project, nest upgrade updates your dependencies to v12 and applies the mechanical parts of the migration:
+- Refuses to run on Node.js releases that lack require(esm) (anything older than v20.19, or v22.x older than v22.12)
+- Bumps every recognized @nestjs/* package to its v12-compatible major (@nestjs/graphql, @nestjs/apollo, and @nestjs/mercurius go to v14), and reports any other @nestjs/* package it doesn't recognize so you can review it yourself
+- Bumps TypeScript to v6 (required by the v12 CLI and schematics), and raises engines.node in package.json to >=20.19.0 if it declares a lower floor
+- Migrates nest-cli.json off the deprecated webpack / webpackConfigPath options and onto --builder rspack, updating matching package.json scripts
+- Renames the GraphQL playground option to graphiql, switches subscriptions from subscriptions-transport-ws to graphql-ws, and swaps the packages accordingly
+- Replaces the legacy nats package with @nats-io/transport-node / @nats-io/nats-core and rewrites nats imports
+- Moves library-specific @nestjs/config settings under validationOptions.libraryOptions and bumps Joi to v18 (the first release implementing Standard Schema)
+- Bumps Jest to v30 (and @types/jest / ts-jest to matching releases) where present, and warns that Jest can require() the ESM-only v12 packages only on Node.js v24.9+
+- Optionally installs and wires up @nestjs/observe. It prompts, unless you pass --observe or --no-observe
+- Checks tsconfig.json and tsconfig.build.json for settings that TypeScript 6 or the ESM-only packages no longer support, such as a legacy moduleResolution or a missing rootDir
+- Scans your sources and prints notes about behavior that changed but can't be migrated automatically, such as lifecycle hook ordering, refined pipe signatures, and structured logging params
+The command finishes by installing the updated dependencies (unless --skip-install is passed) and printing a report of everything it changed, warned about, and left for you.
+
+##### Options
+
+#### nest deploy#
+Deploys your application to the cloud, powered by Mau.
+
+CODE EXAMPLE
+LANGUAGE: bash
+```
+$ nest deploy [mau-options]
+```
+
+##### Description
+nest deploy is a thin wrapper around the Mau CLI. It locates the Mau binary and forwards every argument you pass to mau deploy, so any option Mau supports works here unchanged.
+If Mau is not installed in your project, the command offers to add @nestjs/mau as a dev dependency and then continues. In a non-interactive environment (e.g., CI), the command fails instead of prompting, so install Mau explicitly first:
+
+CODE EXAMPLE
+LANGUAGE: bash
+```
+$ npm install --save-dev @nestjs/mau
+```
+Once Mau starts, it owns the terminal, so its output and prompts reach you directly. See the Deployment chapter for what Mau does and how to configure it.
+
+#### nest info#
+Displays information about installed Nest packages and other useful system information. For example:
+
+CODE EXAMPLE
+LANGUAGE: bash
+```
+$ nest info
+```
+
+CODE EXAMPLE
+LANGUAGE: bash
+```
+_   _             _      ___  _____  _____  _     _____
+| \ | |           | |    |_  |/  ___|/  __ \| |   |_   _|
+|  \| |  ___  ___ | |_     | |\ `--. | /  \/| |     | |
+| . ` | / _ \/ __|| __|    | | `--. \| |    | |     | |
+| |\  ||  __/\__ \| |_ /\__/ //\__/ /| \__/\| |_____| |_
+\_| \_/ \___||___/ \__|\____/ \____/  \____/\_____/\___/
+
+[System Information]
+OS Version     : macOS Sequoia 24.6.0
+NodeJS Version : v22.12.0
+NPM Version    : 10.9.0
+
+[Nest CLI]
+Nest CLI Version : 12.0.3
+
+[Nest Platform Information]
+platform-express version : 12.0.4
+schematics version       : 12.0.4
+testing version          : 12.0.4
+common version           : 12.0.4
+core version             : 12.0.4
+cli version              : 12.0.3
+```

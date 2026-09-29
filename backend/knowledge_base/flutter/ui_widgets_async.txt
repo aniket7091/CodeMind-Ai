@@ -1,0 +1,11 @@
+# Async widgets
+SOURCE: https://docs.flutter.dev/ui/widgets/async
+Flutter 3.47 is here! Read the blog post.
+
+# Async widgets
+A catalog of Flutter's async widgets. Widgets supporting async patterns in your Flutter apps.
+Widgets supporting async patterns in your Flutter apps.
+Widget that builds itself based on the latest snapshot of interaction with a Future.
+Widget that builds itself based on the latest snapshot of interaction with a Stream.
+Find more widgets in the widget catalog.
+Unless stated otherwise, the documentation on this site reflects Flutter 3.47. Page last updated on 2026-05-31. Report an issue.

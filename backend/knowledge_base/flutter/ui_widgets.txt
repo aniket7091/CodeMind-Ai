@@ -1,0 +1,31 @@
+# Widget catalog
+SOURCE: https://docs.flutter.dev/ui/widgets
+Flutter 3.47 is here! Read the blog post.
+
+# Widget catalog
+A catalog of some of Flutter's rich set of widgets.
+Create beautiful apps faster with Flutter's collection of visual, structural, platform, and interactive widgets. In addition to browsing widgets by category, you can also see all the widgets in the widget index.
+
+## Design systems
+Flutter ships with two design systems as part of the SDK.
+You can find many more design systems created by the Flutter community on pub.dev, the package repository for Dart and Flutter. For example, the Windows-inspired fluent_ui, macOS-inspired macos_ui, and the Ubuntu-inspired yaru widgets.
+
+## Base widgets
+Base widgets support a range of common rendering options like input, layout, and text.
+Make your app accessible.
+Bring animations to your app.
+Manage assets, display images, and show icons.
+Widgets supporting async patterns in your Flutter apps.
+Widgets to know before building your first Flutter app.
+Take user input in addition to input widgets in Material components and Cupertino.
+Respond to touch events and route users to different views.
+Arrange other widgets columns, rows, grids, and many other layouts.
+These widgets apply visual effects to the children without changing their layout, size, or position.
+Scroll multiple widgets as children of the parent.
+Manage the theme of your app, make your app responsive to screen sizes, or add padding.
+Display and style text.
+
+## Widget of the Week
+100+ short, 1-minute explainer videos to help you quickly get started with Flutter widgets.
+Watch more widget of the week videos
+Unless stated otherwise, the documentation on this site reflects Flutter 3.47. Page last updated on 2026-05-05. View source or report an issue.

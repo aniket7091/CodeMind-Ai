@@ -1,0 +1,38 @@
+# Scrolling widgets
+SOURCE: https://docs.flutter.dev/ui/widgets/scrolling
+Flutter 3.47 is here! Read the blog post.
+
+# Scrolling widgets
+A catalog of Flutter's scrolling widgets. Scroll multiple widgets as children of the parent.
+Scroll multiple widgets as children of the parent.
+A Material carousel widget that presents a scrollable list of items, each of which can dynamically change size based on the chosen layout.
+A ScrollView that creates custom scroll effects using slivers.
+A container for a Scrollable that responds to drag gestures by resizing the scrollable until a limit is reached, and then scrolling.
+A grid list consists of a repeated pattern of cells arrayed in a vertical and horizontal layout. The GridView widget implements this component.
+A scrollable, linear list of widgets. ListView is the most commonly used scrolling widget. It displays its children one after another in the scroll direction....
+A scrolling view inside of which can be nested other scrolling views, with their scroll positions being intrinsically linked.
+A widget that listens for Notifications bubbling up the tree.
+A scrollable list that works page by page.
+A Material Design pull-to-refresh wrapper for scrollables.
+A list whose items the user can interactively reorder by dragging.
+Controls how Scrollable widgets behave in a subtree.
+Scrollable implements the interaction model for a scrollable widget, including gesture recognition, but does not have an opinion about how the viewport, which actually displays...
+A Material Design scrollbar. A scrollbar indicates which portion of a Scrollable widget is actually visible.
+A box in which a single widget can be scrolled. This widget is useful when you have a single box that will normally be entirely...
+
+## Sliver widgets
+A navigation bar with iOS-11-style large titles using slivers.
+A sliver widget implementing the iOS-style pull to refresh content control.
+A ScrollView that creates custom scroll effects using slivers.
+A material design app bar that integrates with a CustomScrollView.
+A delegate that supplies children for slivers using a builder callback.
+A delegate that supplies children for slivers using an explicit list.
+A sliver that contains a single box child that fills the remaining space in the viewport.
+A sliver that places multiple box children with the same main axis extent in a linear array.
+A sliver that places multiple box children in a two dimensional arrangement.
+A sliver that places multiple box children in a linear array along the main axis.
+A sliver that applies padding on each side of another sliver.
+A sliver whose size varies when the sliver is scrolled to the edge of the viewport opposite the sliver's GrowthDirection.
+A sliver that contains a single box widget.
+Find more widgets in the widget catalog.
+Unless stated otherwise, the documentation on this site reflects Flutter 3.47. Page last updated on 2026-05-31. Report an issue.

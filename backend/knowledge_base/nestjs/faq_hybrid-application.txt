@@ -1,0 +1,97 @@
+# Hybrid application - FAQ | NestJS - A progressive Node.js framework
+SOURCE: https://docs.nestjs.com/faq/hybrid-application
+
+### Hybrid application
+A hybrid application listens for requests from two or more different sources. It can combine an HTTP server with a microservice listener, or combine several different microservice listeners. The createMicroservice() method doesn't support multiple servers, so in this case you create and start each microservice manually. To do this, connect INestMicroservice instances to the INestApplication instance with the connectMicroservice() method.
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+const app = await NestFactory.create(AppModule);
+const microservice = app.connectMicroservice<MicroserviceOptions>({
+  transport: Transport.TCP,
+});
+
+await app.startAllMicroservices();
+await app.listen(3001);
+```
+To connect multiple microservice instances, call connectMicroservice() once for each microservice:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+const app = await NestFactory.create(AppModule);
+// microservice #1
+const microserviceTcp = app.connectMicroservice<MicroserviceOptions>({
+  transport: Transport.TCP,
+  options: {
+    port: 3002,
+  },
+});
+// microservice #2
+const microserviceRedis = app.connectMicroservice<MicroserviceOptions>({
+  transport: Transport.REDIS,
+  options: {
+    host: 'localhost',
+    port: 6379,
+  },
+});
+
+await app.startAllMicroservices();
+await app.listen(3001);
+```
+In a hybrid application with multiple microservices, you can bind @MessagePattern() to a single transport strategy (for example, NATS) by passing a second argument that identifies the transport. For the built-in strategies, this is a value of the Transport enum; for a custom transporter, it is the transportId symbol of its server class.
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+@MessagePattern('time.us.*', Transport.NATS)
+getDate(@Payload() data: number[], @Ctx() context: NatsContext) {
+  console.log(`Subject: ${context.getSubject()}`); // e.g. "time.us.east"
+  return new Date().toLocaleTimeString(...);
+}
+@MessagePattern({ cmd: 'time.us' }, Transport.TCP)
+getTCPDate(@Payload() data: number[]) {
+  return new Date().toLocaleTimeString(...);
+}
+@MessagePattern('topic.time.us', XYZServer.Transport) // XYZServer is a custom transporter
+getXYZDate(@Payload() data: number[]) {
+  return new Date().toLocaleTimeString(...);
+}
+```
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+@Bind(Payload(), Ctx())
+@MessagePattern('time.us.*', Transport.NATS)
+getDate(data, context) {
+  console.log(`Subject: ${context.getSubject()}`); // e.g. "time.us.east"
+  return new Date().toLocaleTimeString(...);
+}
+@Bind(Payload(), Ctx())
+@MessagePattern({ cmd: 'time.us' }, Transport.TCP)
+getTCPDate(data, context) {
+  return new Date().toLocaleTimeString(...);
+}
+
+@Bind(Payload())
+@MessagePattern('topic.time.us', XYZServer.Transport)
+getXYZDate(data) {
+  return new Date().toLocaleTimeString(...);
+}
+```
+
+#### Sharing configuration#
+By default, connected microservices don't inherit the global pipes, interceptors, guards, and filters configured for the main (HTTP-based) application. This applies both to enhancers registered with the useGlobal*() methods and to those registered as providers with the APP_PIPE, APP_INTERCEPTOR, APP_GUARD, and APP_FILTER tokens. To inherit this configuration, set the inheritAppConfig property in the options object passed as the second argument of connectMicroservice():
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+const microservice = app.connectMicroservice<MicroserviceOptions>(
+  {
+    transport: Transport.TCP,
+  },
+  { inheritAppConfig: true },
+);
+```

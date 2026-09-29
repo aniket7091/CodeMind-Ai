@@ -1,0 +1,84 @@
+# Authorize ServerHttpRequest :: Spring Security
+SOURCE: https://docs.spring.io/spring-security/reference/reactive/authorization/authorize-http-requests.html
+
+# Authorize ServerHttpRequest
+Spring Security provides support for authorizing the incoming HTTP requests. By default, Spring Security’s authorization will require all requests to be authenticated. The explicit configuration looks like:
+Java
+Kotlin
+
+CODE EXAMPLE
+LANGUAGE: java
+```
+@Bean
+SecurityWebFilterChain springSecurityFilterChain(ServerHttpSecurity http) {
+    http
+        .authorizeExchange((authorize) -> authorize
+            .anyExchange().authenticated()
+        )
+        .httpBasic(withDefaults())
+        .formLogin(withDefaults());
+    return http.build();
+}
+```
+
+CODE EXAMPLE
+LANGUAGE: kotlin
+```
+@Bean
+fun springSecurityFilterChain(http: ServerHttpSecurity): SecurityWebFilterChain {
+    return http {
+        authorizeExchange {
+            authorize(anyExchange, authenticated)
+        }
+        formLogin { }
+        httpBasic { }
+    }
+}
+```
+We can configure Spring Security to have different rules by adding more rules in order of precedence.
+Java
+Kotlin
+
+CODE EXAMPLE
+LANGUAGE: java
+```
+import static org.springframework.security.authorization.AuthorityReactiveAuthorizationManager.hasRole;
+// ...
+@Bean
+SecurityWebFilterChain springWebFilterChain(ServerHttpSecurity http) {
+	http
+		// ...
+		.authorizeExchange((authorize) -> authorize                          (1)
+			.pathMatchers("/resources/**", "/signup", "/about").permitAll()  (2)
+			.pathMatchers("/admin/**").hasRole("ADMIN")                      (3)
+			.pathMatchers("/db/**").access((authentication, context) ->      (4)
+				hasRole("ADMIN").check(authentication, context)
+					.filter(decision -> !decision.isGranted())
+					.switchIfEmpty(hasRole("DBA").check(authentication, context))
+			)
+			.anyExchange().denyAll()                                         (5)
+		);
+	return http.build();
+}
+```
+
+CODE EXAMPLE
+LANGUAGE: kotlin
+```
+@Bean
+fun springSecurityFilterChain(http: ServerHttpSecurity): SecurityWebFilterChain {
+    return http {
+        authorizeExchange {                                                           (1)
+            authorize(pathMatchers("/resources/**", "/signup", "/about"), permitAll)  (2)
+            authorize("/admin/**", hasRole("ADMIN"))                                  (3)
+            authorize("/db/**", { authentication, context ->                          (4)
+                hasRole("ADMIN").check(authentication, context)
+                    .filter({ decision -> !decision.isGranted() })
+                    .switchIfEmpty(hasRole("DBA").check(authentication, context))
+            })
+            authorize(anyExchange, denyAll)                                           (5)
+        }
+        // ...
+    }
+}
+```

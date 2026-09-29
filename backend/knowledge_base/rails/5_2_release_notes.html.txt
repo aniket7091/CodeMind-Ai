@@ -1,0 +1,291 @@
+# Ruby on Rails 5.2 Release Notes — Ruby on Rails Guides
+SOURCE: https://guides.rubyonrails.org/5_2_release_notes.html
+
+# Ruby on Rails 5.2 Release Notes
+Highlights in Rails 5.2:
+- Active Storage
+- Redis Cache Store
+- HTTP/2 Early Hints
+- Credentials
+- Content Security Policy
+These release notes cover only the major changes. To learn about various bug fixes and changes, please refer to the changelogs or check out the list of commits in the main Rails repository on GitHub.
+
+## 1. Upgrading to Rails 5.2
+If you're upgrading an existing application, it's a great idea to have good test coverage before going in. You should also first upgrade to Rails 5.1 in case you haven't and make sure your application still runs as expected before attempting an update to Rails 5.2. A list of things to watch out for when upgrading is available in the Upgrading Ruby on Rails guide.
+
+## 2. Major Features
+
+### 2.1. Active Storage
+Pull Request
+Active Storage facilitates uploading files to a cloud storage service like Amazon S3, Google Cloud Storage, or Microsoft Azure Storage and attaching those files to Active Record objects. It comes with a local disk-based service for development and testing and supports mirroring files to subordinate services for backups and migrations. You can read more about Active Storage in the Active Storage Overview guide.
+
+### 2.2. Redis Cache Store
+Pull Request
+Rails 5.2 ships with built-in Redis cache store. You can read more about this in the Caching with Rails: An Overview guide.
+
+### 2.3. HTTP/2 Early Hints
+Pull Request
+Rails 5.2 supports HTTP/2 Early Hints. To start the server with Early Hints enabled pass --early-hints to bin/rails server.
+
+### 2.4. Credentials
+Pull Request
+Added config/credentials.yml.enc file to store production app secrets. It allows saving any authentication credentials for third-party services directly in repository encrypted with a key in the config/master.key file or the RAILS_MASTER_KEY environment variable. This will eventually replace Rails.application.secrets and the encrypted secrets introduced in Rails 5.1. Furthermore, Rails 5.2 opens API underlying Credentials, so you can easily deal with other encrypted configurations, keys, and files. You can read more about this in the Securing Rails Applications guide.
+
+### 2.5. Content Security Policy
+Pull Request
+Rails 5.2 ships with a new DSL that allows you to configure a Content Security Policy for your application. You can configure a global default policy and then override it on a per-resource basis and even use lambdas to inject per-request values into the header such as account subdomains in a multi-tenant application. You can read more about this in the Securing Rails Applications guide.
+
+## 3. Railties
+Please refer to the Changelog for detailed changes.
+
+### 3.1. Deprecations
+Deprecate capify! method in generators and templates. (Pull Request)
+Passing the environment's name as a regular argument to the rails dbconsole and rails console commands is deprecated. The -e option should be used instead. (Commit)
+Deprecate using subclass of Rails::Application to start the Rails server. (Pull Request)
+Deprecate after_bundle callback in Rails plugin templates. (Pull Request)
+
+### 3.2. Notable changes
+Added a shared section to config/database.yml that will be loaded for all environments. (Pull Request)
+Add railtie.rb to the plugin generator. (Pull Request)
+Clear screenshot files in tmp:clear task. (Pull Request)
+Skip unused components when running bin/rails app:update. If the initial app generation skipped Action Cable, Active Record, etc., the update task honors those skips too. (Pull Request)
+Allow passing a custom connection name to the rails dbconsole command when using a 3-level database configuration. Example: bin/rails dbconsole -c replica. (Commit)
+Properly expand shortcuts for environment's name running the console and dbconsole commands. (Commit)
+Add bootsnap to default Gemfile. (Pull Request)
+Support - as a platform-agnostic way to run a script from stdin with rails runner (Pull Request)
+Add ruby x.x.x version to Gemfile and create .ruby-version root file containing the current Ruby version when new Rails applications are created. (Pull Request)
+Add --skip-action-cable option to the plugin generator. (Pull Request)
+Add git_source to Gemfile for plugin generator. (Pull Request)
+Skip unused components when running bin/rails in Rails plugin. (Commit)
+Optimize indentation for generator actions. (Pull Request)
+Optimize routes indentation. (Pull Request)
+Add --skip-yarn option to the plugin generator. (Pull Request)
+Support multiple versions arguments for gem method of Generators. (Pull Request)
+Derive secret_key_base from the app name in development and test environments. (Pull Request)
+Add mini_magick to default Gemfile as comment. (Pull Request)
+rails new and rails plugin new get Active Storage by default. Add ability to skip Active Storage with --skip-active-storage and do so automatically when --skip-active-record is used. (Pull Request)
+
+## 4. Action Cable
+Please refer to the Changelog for detailed changes.
+
+### 4.1. Removals
+- Removed deprecated evented redis adapter. (Commit)
+
+### 4.2. Notable changes
+Add support for host, port, db and password options in cable.yml (Pull Request)
+Hash long stream identifiers when using PostgreSQL adapter. (Pull Request)
+
+## 5. Action Pack
+Please refer to the Changelog for detailed changes.
+
+### 5.1. Removals
+- Remove deprecated ActionController::ParamsParser::ParseError. (Commit)
+
+### 5.2. Deprecations
+- Deprecate #success?, #missing? and #error? aliases of ActionDispatch::TestResponse. (Pull Request)
+
+### 5.3. Notable changes
+Add support for recyclable cache keys with fragment caching. (Pull Request)
+Change the cache key format for fragments to make it easier to debug key churn. (Pull Request)
+AEAD encrypted cookies and sessions with GCM. (Pull Request)
+Protect from forgery by default. (Pull Request)
+Enforce signed/encrypted cookie expiry server side. (Pull Request)
+Cookies :expires option supports ActiveSupport::Duration object. (Pull Request)
+Use Capybara registered :puma server config. (Pull Request)
+Simplify cookies middleware with key rotation support. (Pull Request)
+Add ability to enable Early Hints for HTTP/2. (Pull Request)
+Add headless chrome support to System Tests. (Pull Request)
+Add :allow_other_host option to redirect_back method. (Pull Request)
+Make assert_recognizes to traverse mounted engines. (Pull Request)
+Add DSL for configuring Content-Security-Policy header. (Pull Request, Commit, Commit)
+Register most popular audio/video/font MIME types supported by modern browsers. (Pull Request)
+Changed the default system test screenshot output from inline to simple. (Commit)
+Add headless firefox support to System Tests. (Pull Request)
+Add secure X-Download-Options and X-Permitted-Cross-Domain-Policies to default headers set. (Commit)
+Changed the system tests to set Puma as default server only when the user haven't specified manually another server. (Pull Request)
+Add Referrer-Policy header to default headers set. (Commit)
+Matches behavior of Hash#each in ActionController::Parameters#each. (Pull Request)
+Add support for automatic nonce generation for Rails UJS. (Commit)
+Update the default HSTS max-age value to 31536000 seconds (1 year) to meet the minimum max-age requirement for https://hstspreload.org/. (Commit)
+Add alias method to_hash to to_h for cookies. Add alias method to_h to to_hash for session. (Commit)
+
+## 6. Action View
+Please refer to the Changelog for detailed changes.
+
+### 6.1. Removals
+- Remove deprecated Erubis ERB handler. (Commit)
+
+### 6.2. Deprecations
+- Deprecate image_alt helper which used to add default alt text to the images generated by image_tag. (Pull Request)
+
+### 6.3. Notable changes
+Add :json type to auto_discovery_link_tag to support JSON Feeds. (Pull Request)
+Add srcset option to image_tag helper. (Pull Request)
+Fix issues with field_error_proc wrapping optgroup and select divider option. (Pull Request)
+Change form_with to generate ids by default. (Commit)
+Add preload_link_tag helper. (Pull Request)
+Allow the use of callable objects as group methods for grouped selects. (Pull Request)
+
+## 7. Action Mailer
+Please refer to the Changelog for detailed changes.
+
+### 7.1. Notable changes
+Allow Action Mailer classes to configure their delivery job. (Pull Request)
+Add assert_enqueued_email_with test helper. (Pull Request)
+
+## 8. Active Record
+Please refer to the Changelog for detailed changes.
+
+### 8.1. Removals
+Remove deprecated #migration_keys. (Pull Request)
+Remove deprecated support to quoted_id when typecasting an Active Record object. (Commit)
+Remove deprecated argument default from index_name_exists?. (Commit)
+Remove deprecated support to passing a class to :class_name on associations. (Commit)
+Remove deprecated methods initialize_schema_migrations_table and initialize_internal_metadata_table. (Commit)
+Remove deprecated method supports_migrations?. (Commit)
+Remove deprecated method supports_primary_key?. (Commit)
+Remove deprecated method ActiveRecord::Migrator.schema_migrations_table_name. (Commit)
+Remove deprecated argument name from #indexes. (Commit)
+Remove deprecated arguments from #verify!. (Commit)
+Remove deprecated configuration .error_on_ignored_order_or_limit. (Commit)
+Remove deprecated method #scope_chain. (Commit)
+Remove deprecated method #sanitize_conditions. (Commit)
+
+### 8.2. Deprecations
+Deprecate supports_statement_cache?. (Pull Request)
+Deprecate passing arguments and block at the same time to count and sum in ActiveRecord::Calculations. (Pull Request)
+Deprecate delegating to arel in Relation. (Pull Request)
+Deprecate set_state method in TransactionState. (Commit)
+Deprecate expand_hash_conditions_for_aggregates without replacement. (Commit)
+
+### 8.3. Notable changes
+When calling the dynamic fixture accessor method with no arguments, it now returns all fixtures of this type. Previously this method always returned an empty array. (Pull Request)
+Fix inconsistency with changed attributes when overriding Active Record attribute reader. (Pull Request)
+Support Descending Indexes for MySQL. (Pull Request)
+Fix bin/rails db:forward first migration. (Commit)
+Raise error UnknownMigrationVersionError on the movement of migrations when the current migration does not exist. (Commit)
+Respect SchemaDumper.ignore_tables in rake tasks for databases structure dump. (Pull Request)
+Add ActiveRecord::Base#cache_version to support recyclable cache keys via the new versioned entries in ActiveSupport::Cache. This also means that ActiveRecord::Base#cache_key will now return a stable key that does not include a timestamp any more. (Pull Request)
+Prevent creation of bind param if casted value is nil. (Pull Request)
+Use bulk INSERT to insert fixtures for better performance. (Pull Request)
+Merging two relations representing nested joins no longer transforms the joins of the merged relation into LEFT OUTER JOIN. (Pull Request)
+Fix transactions to apply state to child transactions. Previously, if you had a nested transaction and the outer transaction was rolledback, the record from the inner transaction would still be marked as persisted. It was fixed by applying the state of the parent transaction to the child transaction when the parent transaction is rolledback. This will correctly mark records from the inner transaction as not persisted. (Commit)
+Fix eager loading/preloading association with scope including joins. (Pull Request)
+Prevent errors raised by sql.active_record notification subscribers from being converted into ActiveRecord::StatementInvalid exceptions. (Pull Request)
+Skip query caching when working with batches of records (find_each, find_in_batches, in_batches). (Commit)
+Change sqlite3 boolean serialization to use 1 and 0. SQLite natively recognizes 1 and 0 as true and false, but does not natively recognize 't' and 'f' as was previously serialized. (Pull Request)
+Values constructed using multi-parameter assignment will now use the post-type-cast value for rendering in single-field form inputs. (Commit)
+ApplicationRecord is no longer generated when generating models. If you need to generate it, it can be created with rails g application_record. (Pull Request)
+Relation#or now accepts two relations who have different values for references only, as references can be implicitly called by where. (Commit)
+When using Relation#or, extract the common conditions and put them before the OR condition. (Pull Request)
+Add binary fixture helper method. (Pull Request)
+Automatically guess the inverse associations for STI. (Pull Request)
+Add new error class LockWaitTimeout which will be raised when lock wait timeout exceeded. (Pull Request)
+Update payload names for sql.active_record instrumentation to be more descriptive. (Pull Request)
+Use given algorithm while removing index from database. (Pull Request)
+Passing a Set to Relation#where now behaves the same as passing an array. (Commit)
+PostgreSQL tsrange now preserves subsecond precision. (Pull Request)
+Raises when calling lock! in a dirty record. (Commit)
+Fixed a bug where column orders for an index weren't written to db/schema.rb when using the SQLite adapter. (Pull Request)
+Fix bin/rails db:migrate with specified VERSION. bin/rails db:migrate with empty VERSION behaves as without VERSION. Check a format of VERSION: Allow a migration version number or name of a migration file. Raise error if format of VERSION is invalid. Raise error if target migration doesn't exist. (Pull Request)
+Add new error class StatementTimeout which will be raised when statement timeout exceeded. (Pull Request)
+update_all will now pass its values to Type#cast before passing them to Type#serialize. This means that update_all(foo: 'true') will properly persist a boolean. (Commit)
+Require raw SQL fragments to be explicitly marked when used in relation query methods. (Commit, Commit)
+Add #up_only to database migrations for code that is only relevant when migrating up, e.g. populating a new column. (Pull Request)
+Add new error class QueryCanceled which will be raised when canceling statement due to user request. (Pull Request)
+Don't allow scopes to be defined which conflict with instance methods on Relation. (Pull Request)
+Add support for PostgreSQL operator classes to add_index. (Pull Request)
+Log database query callers. (Pull Request, Pull Request, Pull Request)
+Undefine attribute methods on descendants when resetting column information. (Pull Request)
+Using subselect for delete_all with limit or offset. (Commit)
+Fixed inconsistency with first(n) when used with limit(). The first(n) finder now respects the limit(), making it consistent with relation.to_a.first(n), and also with the behavior of last(n). (Pull Request)
+Fix nested has_many :through associations on unpersisted parent instances. (Commit)
+Take into account association conditions when deleting through records. (Commit)
+Don't allow destroyed object mutation after save or save! is called. (Commit)
+Fix relation merger issue with left_outer_joins. (Pull Request)
+Support for PostgreSQL foreign tables. (Pull Request)
+Clear the transaction state when an Active Record object is duped. (Pull Request)
+Fix not expanded problem when passing an Array object as argument to the where method using composed_of column. (Pull Request)
+Make reflection.klass raise if polymorphic? not to be misused. (Commit)
+Fix #columns_for_distinct of MySQL and PostgreSQL to make ActiveRecord::FinderMethods#limited_ids_for use correct primary key values even if ORDER BY columns include other table's primary key. (Commit)
+Fix dependent: :destroy issue for has_one/belongs_to relationship where the parent class was getting deleted when the child was not. (Commit)
+Idle database connections (previously just orphaned connections) are now periodically reaped by the connection pool reaper. (Commit)
+
+## 9. Active Model
+Please refer to the Changelog for detailed changes.
+
+### 9.1. Notable changes
+Fix methods #keys, #values in ActiveModel::Errors. Change #keys to only return the keys that don't have empty messages. Change #values to only return the not empty values. (Pull Request)
+Add method #merge! for ActiveModel::Errors. (Pull Request)
+Allow passing a Proc or Symbol to length validator options. (Pull Request)
+Execute ConfirmationValidator validation when _confirmation's value is false. (Pull Request)
+Models using the attributes API with a proc default can now be marshalled. (Commit)
+Do not lose all multiple :includes with options in serialization. (Commit)
+
+## 10. Active Support
+Please refer to the Changelog for detailed changes.
+
+### 10.1. Removals
+Remove deprecated :if and :unless string filter for callbacks. (Commit)
+Remove deprecated halt_callback_chains_on_return_false option. (Commit)
+
+### 10.2. Deprecations
+Deprecate Module#reachable? method. (Pull Request)
+Deprecate secrets.secret_token. (Commit)
+
+### 10.3. Notable changes
+Add fetch_values for HashWithIndifferentAccess. (Pull Request)
+Add support for :offset to Time#change. (Commit)
+Add support for :offset and :zone to ActiveSupport::TimeWithZone#change. (Commit)
+Pass gem name and deprecation horizon to deprecation notifications. (Pull Request)
+Add support for versioned cache entries. This enables the cache stores to recycle cache keys, greatly saving on storage in cases with frequent churn. Works together with the separation of #cache_key and #cache_version in Active Record and its use in Action Pack's fragment caching. (Pull Request)
+Add ActiveSupport::CurrentAttributes to provide a thread-isolated attributes singleton. Primary use case is keeping all the per-request attributes easily available to the whole system. (Pull Request)
+#singularize and #pluralize now respect uncountables for the specified locale. (Commit)
+Add default option to class_attribute. (Pull Request)
+Add Date#prev_occurring and Date#next_occurring to return specified next/previous occurring day of week. (Pull Request)
+Add default option to module and class attribute accessors. (Pull Request)
+Cache: write_multi. (Pull Request)
+Default ActiveSupport::MessageEncryptor to use AES 256 GCM encryption. (Pull Request)
+Add freeze_time helper which freezes time to Time.now in tests. (Pull Request)
+Make the order of Hash#reverse_merge! consistent with HashWithIndifferentAccess. (Pull Request)
+Add purpose and expiry support to ActiveSupport::MessageVerifier and ActiveSupport::MessageEncryptor. (Pull Request)
+Update String#camelize to provide feedback when wrong option is passed. (Pull Request)
+Module#delegate_missing_to now raises DelegationError if target is nil, similar to Module#delegate. (Pull Request)
+Add ActiveSupport::EncryptedFile and ActiveSupport::EncryptedConfiguration. (Pull Request)
+Add config/credentials.yml.enc to store production app secrets. (Pull Request)
+Add key rotation support to MessageEncryptor and MessageVerifier. (Pull Request)
+Return an instance of HashWithIndifferentAccess from HashWithIndifferentAccess#transform_keys. (Pull Request)
+Hash#slice now falls back to Ruby 2.5+'s built-in definition if defined. (Commit)
+IO#to_json now returns the to_s representation, rather than attempting to convert to an array. This fixes a bug where IO#to_json would raise an IOError when called on an unreadable object. (Pull Request)
+Add same method signature for Time#prev_day and Time#next_day in accordance with Date#prev_day, Date#next_day. Allows pass argument for Time#prev_day and Time#next_day. (Commit)
+Add same method signature for Time#prev_month and Time#next_month in accordance with Date#prev_month, Date#next_month. Allows pass argument for Time#prev_month and Time#next_month. (Commit)
+Add same method signature for Time#prev_year and Time#next_year in accordance with Date#prev_year, Date#next_year. Allows pass argument for Time#prev_year and Time#next_year. (Commit)
+Fix acronym support in humanize. (Commit)
+Allow Range#include? on TWZ ranges. (Pull Request)
+Cache: Enable compression by default for values > 1kB. (Pull Request)
+Redis cache store. (Pull Request, Pull Request)
+Handle TZInfo::AmbiguousTime errors. (Pull Request)
+MemCacheStore: Support expiring counters. (Commit)
+Make ActiveSupport::TimeZone.all return only time zones that are in ActiveSupport::TimeZone::MAPPING. (Pull Request)
+Changed default behavior of ActiveSupport::SecurityUtils.secure_compare, to make it not leak length information even for variable length string. Renamed old ActiveSupport::SecurityUtils.secure_compare to fixed_length_secure_compare, and started raising ArgumentError in case of length mismatch of passed strings. (Pull Request)
+Use SHA-1 to generate non-sensitive digests, such as the ETag header. (Pull Request, Pull Request)
+assert_changes will always assert that the expression changes, regardless of from: and to: argument combinations. (Pull Request)
+Add missing instrumentation for read_multi in ActiveSupport::Cache::Store. (Pull Request)
+Support hash as first argument in assert_difference. This allows to specify multiple numeric differences in the same assertion. (Pull Request)
+Caching: MemCache and Redis read_multi and fetch_multi speedup. Read from the local in-memory cache before consulting the backend. (Commit)
+
+## 11. Active Job
+Please refer to the Changelog for detailed changes.
+
+### 11.1. Notable changes
+- Allow block to be passed to ActiveJob::Base.discard_on to allow custom handling of discard jobs. (Pull Request)
+
+## 12. Ruby on Rails Guides
+Please refer to the Changelog for detailed changes.
+
+### 12.1. Notable changes
+Add Threading and Code Execution in Rails Guide. (Pull Request)
+Add Active Storage Overview Guide. (Pull Request)
+
+## 13. Credits
+See the full list of contributors to Rails for the many people who spent many hours making Rails, the stable and robust framework it is. Kudos to all of them.

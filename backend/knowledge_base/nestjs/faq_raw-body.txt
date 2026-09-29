@@ -1,0 +1,119 @@
+# Raw Body | NestJS - A progressive Node.js framework
+SOURCE: https://docs.nestjs.com/faq/raw-body
+
+### Raw body
+One of the most common reasons to access the raw request body is webhook signature verification. Verifying a webhook signature usually requires the unparsed request body to calculate an HMAC hash.
+
+#### Use with Express#
+First, enable the option when creating your Nest Express application:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+import { NestFactory } from '@nestjs/core';
+import type { NestExpressApplication } from '@nestjs/platform-express';
+import { AppModule } from './app.module.js';
+
+// in the "bootstrap" function
+const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+  rawBody: true,
+});
+await app.listen(process.env.PORT ?? 3000);
+```
+To access the raw request body in a controller, type the request with the RawBodyRequest convenience interface, which exposes a rawBody field:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+import { Controller, Post, type RawBodyRequest, Req } from '@nestjs/common';
+import type { Request } from 'express';
+
+@Controller('cats')
+class CatsController {
+  @Post()
+  create(@Req() req: RawBodyRequest<Request>) {
+    const raw = req.rawBody; // returns a `Buffer`.
+  }
+}
+```
+
+#### Registering a different parser#
+By default, only the json and urlencoded parsers are registered. To use a different parser, register it explicitly.
+For example, to register a text parser:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+app.useBodyParser('text');
+```
+
+#### Body parser size limit#
+If your application needs to parse bodies larger than the Express default of 100kb, raise the limit:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+app.useBodyParser('json', { limit: '10mb' });
+```
+The useBodyParser() method respects the rawBody option passed in the application options.
+
+#### Use with Fastify#
+First, enable the option when creating your Nest Fastify application:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+import { NestFactory } from '@nestjs/core';
+import {
+  FastifyAdapter,
+  NestFastifyApplication,
+} from '@nestjs/platform-fastify';
+import { AppModule } from './app.module.js';
+
+// in the "bootstrap" function
+const app = await NestFactory.create<NestFastifyApplication>(
+  AppModule,
+  new FastifyAdapter(),
+  {
+    rawBody: true,
+  },
+);
+await app.listen(process.env.PORT ?? 3000);
+```
+To access the raw request body in a controller, type the request with the RawBodyRequest convenience interface, which exposes a rawBody field:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+import { Controller, Post, type RawBodyRequest, Req } from '@nestjs/common';
+import type { FastifyRequest } from 'fastify';
+
+@Controller('cats')
+class CatsController {
+  @Post()
+  create(@Req() req: RawBodyRequest<FastifyRequest>) {
+    const raw = req.rawBody; // returns a `Buffer`.
+  }
+}
+```
+
+#### Registering a different parser#
+By default, only the application/json and application/x-www-form-urlencoded parsers are registered. To use a different parser, register it explicitly.
+For example, to register a text/plain parser:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+app.useBodyParser('text/plain');
+```
+
+#### Body parser size limit#
+If your application needs to parse bodies larger than the Fastify default of 1 MiB, raise the limit:
+
+CODE EXAMPLE
+LANGUAGE: typescript
+```
+const bodyLimit = 10_485_760; // 10MiB
+app.useBodyParser('application/json', { bodyLimit });
+```
+The useBodyParser() method respects the rawBody option passed in the application options.

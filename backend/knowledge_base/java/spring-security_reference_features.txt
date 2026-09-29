@@ -1,0 +1,11 @@
+# Features :: Spring Security
+SOURCE: https://docs.spring.io/spring-security/reference/features/
+
+# Features
+Spring Security provides comprehensive support for authentication, authorization, and protection against common exploits. It also provides integration with other libraries to simplify its usage.
+
+## Section Summary
+- Authentication
+- Authorization
+- Protection Against Exploits
+- Integrations

@@ -1,0 +1,75 @@
+# ASP.NET Core security topics | Microsoft Learn
+SOURCE: https://learn.microsoft.com/en-us/aspnet/core/security/
+Note
+Access to this page requires authorization. You can try signing in or changing directories.
+Access to this page requires authorization. You can try changing directories.
+
+# ASP.NET Core security topics
+ASP.NET Core enables developers to configure and manage security. The following list provides links to articles about working with security in ASP.NET Core:
+- Authentication
+- Authorization
+- Data protection
+- HTTPS enforcement
+- Safe storage of app secrets in development
+- XSRF/CSRF prevention
+- Cross Origin Resource Sharing (CORS)
+- Cross-Site Scripting (XSS) attacks
+These security features allow you to build robust and secure ASP.NET Core apps.
+For Blazor security coverage, which adds to or supersedes the guidance in this node, see ASP.NET Core Blazor authentication and authorization and the other articles in Blazor's Security and Identity node.
+
+## ASP.NET Core security features
+ASP.NET Core provides many tools and libraries to secure ASP.NET Core apps, such as built-in identity providers and non-Microsoft identity services like Facebook, Twitter, and LinkedIn. ASP.NET Core provides several approaches to store app secrets.
+
+## Authentication vs. Authorization
+Authentication is a process where a user provides credentials that are compared to credentials stored in an operating system, database, app, or resource. When the two sets of credentials match, the user authenticates successfully. They can then perform actions for which they're authorized. The authorization process determines the actions the user is allowed to do.
+Another way to think of authentication is to consider it as a way to enter a space, where the space is a server, database, app, or resource. Authorization defines what actions the user can perform to which objects inside that space (server, database, or app).
+
+## Common vulnerabilities in software
+ASP.NET Core and Entity Framework contain features that help you secure your apps and prevent security breaches. The following list of links takes you to documentation detailing techniques to avoid the most common security vulnerabilities in web apps:
+- Cross-Site Scripting (XSS) attacks
+- SQL queries > SQL injection attacks
+- Cross-Site Request Forgery (XSRF/CSRF) attacks
+- Open redirect attacks
+There are more vulnerabilities that you should be aware of. For more information, see the other articles in the Security and Identity section of the table of contents.
+
+## Secure authentication flows
+We recommend using the most secure authentication option. For Azure services, the most secure authentication is managed identities.
+Avoid using the Resource Owner Password Credentials (ROPG) grant:
+- It exposes the user's password to the client.
+- It's a significant security risk.
+- Use it only when other authentication flows aren't possible.
+Managed identities are a secure way to authenticate to services without needing to store credentials in code, environment variables, or configuration files. Managed identities are available for Azure services, and can be used with Azure SQL, Azure Storage, and other Azure services:
+- Managed identities in Microsoft Entra for Azure SQL
+- Managed identities for App Service and Azure Functions
+- Secure authentication flows
+When the app is deployed to a test server, an environment variable can be used to set the connection string to a test database server. For more information, see Configuration. Environment variables are commonly stored in plain, unencrypted text. If the machine or process is compromised, environment variables might be accessible to untrusted parties. We recommend against using environment variables to store a production connection string as it's not the most secure approach.
+Configuration data guidelines:
+- Never store passwords or other sensitive data in configuration provider code or in plain text configuration files. The Secret Manager tool can be used to store secrets in development.
+- Don't use production secrets in development or test environments.
+- Specify secrets outside of the project so that they can't be accidentally committed to a source code repository.
+For more information, see:
+- Managed identity best practice recommendations
+- Connecting from your application to resources without handling credentials in your code
+- Azure services that can use managed identities to access other services
+- IETF OAuth 2.0 Security Best Current Practice (Section 2.4. Resource Owner Password Credentials Grant)
+For information on other cloud providers, see:
+- AWS (Amazon Web Services): AWS Key Management Service (KMS)
+- Google Cloud Key Management Service overview
+
+## Enterprise web app patterns
+For guidance on creating a reliable, secure, performant, testable, and scalable ASP.NET Core app, see Enterprise web app patterns. A complete production-quality sample web app that implements the patterns is available.
+
+## Related content
+- Introduction to Identity on ASP.NET Core
+- Enable QR code generation for TOTP authentication
+- Using external login providers with Identity in ASP.NET Core
+- Identity management solutions for .NET web apps
+ASP.NET Core
+
+## Feedback
+Was this page helpful?
+Need help with this topic?
+Want to try using Ask Learn to clarify or guide you through this topic?
+
+## Additional resources
+- Last updated on 2026-05-20
